@@ -116,10 +116,6 @@ void setup() {
   gyro_0.begin();
   Serial.begin(115200);
   randomSeed((unsigned long)(lightsensor_12.read() * 123456));
-  while(1) {
-      autonomousDriving();
-      _loop();
-  }
 }
 
 void _loop() {
@@ -128,5 +124,6 @@ void _loop() {
 }
 
 void loop() {
+  autonomousDriving();
   _loop();
 }
