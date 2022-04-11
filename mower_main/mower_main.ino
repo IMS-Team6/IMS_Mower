@@ -13,8 +13,10 @@ MeEncoderOnBoard Encoder_2(SLOT2);
 MeLightSensor lightsensor_12(12);
 MeGyro gyro_0(0, 0x69);
 
+//Maximum distance allowed between robot and obstacle.
 int distanceToObstacle = 10;
-uint8_t insidePlayArea = 0x00;
+//Defines which state the robot is in, should make an enum to be more clear.
+int state;
 
 void isr_process_encoder1(void)
 {
@@ -54,48 +56,95 @@ void move(int direction, int speed)
 }
 
 void moveForward(int dutyCycle){
-  move(1, dutyCycle / 100.0 * 255);
-  _delay(0.2);
-  move(1, 0);
+  Encoder_1.setTarPWM(-dutyCycle / 100.0 * 255);
+  Encoder_2.setTarPWM(dutyCycle / 100.0 * 255);
+}
+
+void stopMotors(){
+  Encoder_1.setTarPWM(0);
+  Encoder_2.setTarPWM(0);
 }
 
 void changeDirection(){
   /*
   Does this reset the gyro? Could eliminate the drift between measurement. 
   Direction is "stored" by the app anyways, send change from last direction not the initial one.
-  gyro_0.begin();
   */
-  Encoder_1.setTarPWM(0);
-  Encoder_2.setTarPWM(0);
-  _delay(0.5);
-  _delay(2);
-
+  gyro_0.begin();
+  
   move(4, 50 / 100.0 * 255);
   _delay(1);
   move(4, 0);
 }
 
-double getOrientation(){
+String getOrientation(){
   gyro_0.update();
   double angle = gyro_0.getAngle(3);
   if(angle < 0){
     angle += 360;
   }
-  Serial.println(String(angle));
-  return angle;
+  return String(angle);
 }
 
-void autonomousDriving(){
+int checkSensors(){
   if(ultrasonic_10.distanceCm() <= distanceToObstacle){
-    //take photo
-    changeDirection();
-    getOrientation();
-  }else if(0?(0==0?linefollower_9.readSensors()==0:(linefollower_9.readSensors() & 0)==0):(0==0?linefollower_9.readSensors()==3:(linefollower_9.readSensors() & 0)==0)){
-    moveForward(25);
+    return 2;
+  }else if(linefollower_9.readSensors()!=3){    //0?(0==0?linefollower_9.readSensors()==0:(linefollower_9.readSensors() & 0)==0):(0==0?linefollower_9.readSensors()==3:(linefollower_9.readSensors() & 0)==0)
+    return 3;
   }else{
-    changeDirection();
-    getOrientation();
+    return 1;
   }
+}
+
+void receiveAck(){
+  while(1){
+    if(Serial.available() > 0){
+      String data = Serial.readStringUntil('\n');
+      break;
+    }
+  }
+}
+
+int autonomousDriving(int state){
+  switch(state){
+    case 0:
+      //Start motors...
+      moveForward(40);
+      Serial.println("Run");
+      //receiveAck();
+      state = 1;
+      break;
+    case 1:
+      //Just driving forward....h
+      state = checkSensors();
+      break;
+    case 2:
+      //Found obstacle....
+      stopMotors();
+      Serial.println("Obstacle encountered.");
+      _delay(1);
+      //receiveAck();
+      state = 4;
+      break;
+    case 3:
+      //Out of bounds
+      stopMotors();
+      Serial.println("Out of Bounds");
+      //receiveAck();
+      _delay(1);
+      state = 4;
+      break;
+    case 4:
+      //Turn...
+      changeDirection();
+      Serial.println("Turn " + getOrientation());
+      //receiveAck();
+      state = 0;
+    default:
+      //SHOULD NOT GET HERE!!!
+      break;
+  }
+  return state;
 }
 
 void _delay(float seconds) {
@@ -114,8 +163,10 @@ void setup() {
   attachInterrupt(Encoder_1.getIntNum(), isr_process_encoder1, RISING);
   attachInterrupt(Encoder_2.getIntNum(), isr_process_encoder2, RISING);
   gyro_0.begin();
-  Serial.begin(115200);
+  Serial.begin(9600);
   randomSeed((unsigned long)(lightsensor_12.read() * 123456));
+  state = 0;
+  _delay(3);
 }
 
 void _loop() {
@@ -124,6 +175,6 @@ void _loop() {
 }
 
 void loop() {
-  autonomousDriving();
+  state = autonomousDriving(state);
   _loop();
 }
