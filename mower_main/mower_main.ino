@@ -28,6 +28,16 @@ void isr_process_motorRight(void)
   }
 }
 
+int checkSensors(){
+  if(ultrasonic_10.distanceCm() <= distanceToObstacle){
+    return 2;
+  }else if(linefollower_9.readSensors()!=3){
+    return 3;
+  }else{
+    return 1;
+  }
+}
+
 int autonomousDriving(int currentState){
   int nextState = 0;
   switch(currentState){
