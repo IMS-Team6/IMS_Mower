@@ -3,6 +3,22 @@
 #include <SoftwareSerial.h>
 #include <MeAuriga.h>
 
+typedef enum {
+    MOWER_IDLE = 0,
+    MOWER_MAN_FORWARD,
+    MOWER_MAN_BACKWARDS,
+    MOWER_MAN_LEFT,
+    MOWER_MAN_RIGHT,
+    MOWER_CHANGEMODE
+} mowerState_t;
+
+// functions for moving the robot
+void moveForward();
+void moveBackward();
+void turnLeft();
+void turnRight();
+void stopMotors();
+
 
 MeLineFollower linefollower_9(9);
 MeUltrasonicSensor ultrasonic_10(10);
@@ -10,6 +26,50 @@ MeEncoderOnBoard motorLeft(SLOT1);
 MeEncoderOnBoard MotorRight(SLOT2);
 MeLightSensor lightsensor_12(12);
 MeGyro gyro_0(0, 0x69);
+
+void move(int direction, int speed)
+{
+  int leftSpeed = 0;
+  int rightSpeed = 0;
+  if(direction == 1){
+    leftSpeed = -speed;
+    rightSpeed = speed;
+  }else if(direction == 2){
+    leftSpeed = speed;
+    rightSpeed = -speed;
+  }else if(direction == 3){
+    leftSpeed = -speed;
+    rightSpeed = -speed;
+  }else if(direction == 4){
+    leftSpeed = speed;
+    rightSpeed = speed;
+  }
+  motorLeft.setTarPWM(leftSpeed);
+  motorRight.setTarPWM(rightSpeed);
+}
+
+void moveForward() {
+    move(1, 40 / 100.0 * 255);
+}
+
+void moveBackward() {
+    move(2, 50 / 100.0 * 255);
+}
+
+void turnLeft() {
+    move(3, 40 / 100.0 * 255);
+}
+
+void turnRight() {
+    move(4, 40 / 100.0 * 255);
+}
+
+void collision() {
+    moveBackward();
+    _delay(0.5);
+    turnRight();
+    _delay(0.5);
+}
 
 void isr_process_motorLeft(void)
 {
@@ -61,29 +121,38 @@ int autonomousDriving(int currentState){
 
 void bluetoothDriving(int nextState){
   switch(nextState){
-    case 0:
+    case MOWER_IDLE:
     //Stop
+    stopMotors();
+
     break;
 
-    case 1:
+    case MOWER_MAN_FORWARD:
     //Drive forward
+    moveForward();
     break;
 
-    case 2:
+    case MOWER_MAN_BACKWARDS:
     //Drive backward
+    moveBackward();
     break;
 
-    case 3:
+    case MOWER_MAN_LEFT:
     //Turn left
+    turnLeft();
     break;
 
-    case 4:
+    case MOWER_MAN_RIGHT:
     //Turn right
+    turnRight();
     break;
     
-    case 5:
+    case MOWER_CHANGEMODE:
     //Stop the robot and change mode to auto
-    break;
+      break;
+      
+    default:
+        break;
   }
 }
 
