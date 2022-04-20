@@ -60,7 +60,7 @@ int autonomousDriving(int currentState){
 }
 
 void bluetoothDriving(int nextState){
-  switch(currentState){
+  switch(nextState){
     case 0:
     //Stop
     break;
@@ -115,7 +115,7 @@ void loop() {
     break;
 
     case 1:
-    state = bluetoothDriving(state);
+    bluetoothDriving(state);
     break;
 
     case 2:
