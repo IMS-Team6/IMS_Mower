@@ -28,16 +28,6 @@ void isr_process_motorRight(void)
   }
 }
 
-int checkSensors(){
-  if(ultrasonic_10.distanceCm() <= distanceToObstacle){
-    return 2;
-  }else if(linefollower_9.readSensors()!=3){
-    return 3;
-  }else{
-    return 1;
-  }
-}
-
 int autonomousDriving(int currentState){
   int nextState = 0;
   switch(currentState){
@@ -69,8 +59,7 @@ int autonomousDriving(int currentState){
   return nextState;
 }
 
-int bluetoothDriving(int currentState){
-  nextState = 0;
+void bluetoothDriving(int nextState){
   switch(currentState){
     case 0:
     //Stop
@@ -91,17 +80,11 @@ int bluetoothDriving(int currentState){
     case 4:
     //Turn right
     break;
-
-    case 5:
-    //Await next command....
-    nextState = 5;
-    break;
     
-    case 6:
+    case 5:
     //Stop the robot and change mode to auto
     break;
   }
-  return nextState;
 }
 
 
