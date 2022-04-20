@@ -6,32 +6,30 @@
 
 MeLineFollower linefollower_9(9);
 MeUltrasonicSensor ultrasonic_10(10);
-MeEncoderOnBoard Encoder_1(SLOT1);
-MeEncoderOnBoard Encoder_2(SLOT2);
+MeEncoderOnBoard motorLeft(SLOT1);
+MeEncoderOnBoard MotorRight(SLOT2);
 MeLightSensor lightsensor_12(12);
 MeGyro gyro_0(0, 0x69);
 
-int state = 0;
-int mode = 2;
-
-void isr_process_encoder1(void)
+void isr_process_motorLeft(void)
 {
-  if(digitalRead(Encoder_1.getPortB()) == 0){
-    Encoder_1.pulsePosMinus();
+  if(digitalRead(motorLeft.getPortB()) == 0){
+    motorLeft.pulsePosMinus();
   }else{
-    Encoder_1.pulsePosPlus();
+    motorLeft.pulsePosPlus();
   }
 }
-void isr_process_encoder2(void)
+void isr_process_motorRight(void)
 {
-  if(digitalRead(Encoder_2.getPortB()) == 0){
-    Encoder_2.pulsePosMinus();
+  if(digitalRead(motorRight.getPortB()) == 0){
+    motorRight.pulsePosMinus();
   }else{
-    Encoder_2.pulsePosPlus();
+    motorRight.pulsePosPlus();
   }
 }
 
 int autonomousDriving(int currentState){
+  int nextState = 0;
   switch(currentState){
     case 0:
     //StartMotors
@@ -39,6 +37,7 @@ int autonomousDriving(int currentState){
 
     case 1:
     //Check sensors while driving forward
+    nextState = checkSensors(); 
     break;
 
     case 2:
@@ -57,10 +56,10 @@ int autonomousDriving(int currentState){
     //Stop the robot and change mode to bt
     break;        
   }
-  return currentState;
+  return nextState;
 }
 
-int bluetoothDriving(int currentState){
+void bluetoothDriving(int nextState){
   switch(currentState){
     case 0:
     //Stop
@@ -81,12 +80,11 @@ int bluetoothDriving(int currentState){
     case 4:
     //Turn right
     break;
-
+    
     case 5:
     //Stop the robot and change mode to auto
     break;
   }
-  return currentState;
 }
 
 
@@ -95,17 +93,19 @@ void setup() {
   TCCR1B = _BV(CS11) | _BV(WGM12);
   TCCR2A = _BV(WGM21) | _BV(WGM20);
   TCCR2B = _BV(CS21);
-  attachInterrupt(Encoder_1.getIntNum(), isr_process_encoder1, RISING);
-  attachInterrupt(Encoder_2.getIntNum(), isr_process_encoder2, RISING);
+  attachInterrupt(motorLeft.getIntNum(), isr_process_encoder1, RISING);
+  attachInterrupt(motorRight.getIntNum(), isr_process_encoder2, RISING);
   gyro_0.begin();
   Serial.begin(115200);
-  randomSeed((unsigned long)(lightsensor_12.read() * 123456));
+  randomSeed((unsigned long)(lightsensor_12.read() * 123456)); 
+  int state = 0;
+  int mode = 2;
   delay(3000);
 }
 
 void _loop() {
-  Encoder_1.loop();
-  Encoder_2.loop();
+  motorLeft.loop();
+  motorRight.loop();
 }
 
 void loop() {
