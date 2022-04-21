@@ -27,6 +27,10 @@ MeEncoderOnBoard motorRight(SLOT2);
 MeLightSensor lightsensor_12(12);
 MeGyro gyro_0(0, 0x69);
 
+int distanceToObstacle = 10;
+int state = 0;
+int mode = 2;
+
 void move(int direction, int speed)
 {
   int leftSpeed = 0;
@@ -66,9 +70,9 @@ void turnRight() {
 
 void collision() {
     moveBackward();
-    _delay(0.5);
+    delay(500);
     turnRight();
-    _delay(0.5);
+    delay(500);
 }
 
 void isr_process_motorLeft(void)
@@ -172,13 +176,11 @@ void setup() {
   TCCR1B = _BV(CS11) | _BV(WGM12);
   TCCR2A = _BV(WGM21) | _BV(WGM20);
   TCCR2B = _BV(CS21);
-  attachInterrupt(motorLeft.getIntNum(), isr_process_encoder1, RISING);
-  attachInterrupt(motorRight.getIntNum(), isr_process_encoder2, RISING);
+  attachInterrupt(motorLeft.getIntNum(), isr_process_motorLeft, RISING);
+  attachInterrupt(motorRight.getIntNum(), isr_process_motorRight, RISING);
   gyro_0.begin();
   Serial.begin(115200);
   randomSeed((unsigned long)(lightsensor_12.read() * 123456)); 
-  int state = 0;
-  int mode = 2;
   delay(3000);
 }
 
