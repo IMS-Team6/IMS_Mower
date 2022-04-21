@@ -23,7 +23,7 @@ void stopMotors();
 MeLineFollower linefollower_9(9);
 MeUltrasonicSensor ultrasonic_10(10);
 MeEncoderOnBoard motorLeft(SLOT1);
-MeEncoderOnBoard MotorRight(SLOT2);
+MeEncoderOnBoard motorRight(SLOT2);
 MeLightSensor lightsensor_12(12);
 MeGyro gyro_0(0, 0x69);
 
