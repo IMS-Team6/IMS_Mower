@@ -2,6 +2,16 @@
 #include <Wire.h>
 #include <SoftwareSerial.h>
 #include <MeAuriga.h>
+#include <stdlib.h> 
+#include <time.h>
+
+typedef enum {
+    FORWARD,
+    BACKWARDS,
+    LEFT,
+    RIGHT,
+    STOP
+} moveDirection;
 
 typedef enum {
     MOWER_IDLE = 0,
@@ -31,41 +41,44 @@ int distanceToObstacle = 10;
 int state = 0;
 int mode = 2;
 
-void move(int direction, int speed)
+void move(moveDirection direction, int speed)
 {
   int leftSpeed = 0;
   int rightSpeed = 0;
-  if(direction == 1){
+  if(direction == FORWARD){
     leftSpeed = -speed;
     rightSpeed = speed;
-  }else if(direction == 2){
+  }else if(direction == BACKWARDS){
     leftSpeed = speed;
     rightSpeed = -speed;
-  }else if(direction == 3){
+  }else if(direction == LEFT){
     leftSpeed = -speed;
     rightSpeed = -speed;
-  }else if(direction == 4){
+  }else if(direction == RIGHT){
     leftSpeed = speed;
     rightSpeed = speed;
+  }else if(direction == STOP){
+    leftSpeed = 0;
+    rightSpeed = 0;
   }
   motorLeft.setTarPWM(leftSpeed);
   motorRight.setTarPWM(rightSpeed);
 }
 
 void moveForward() {
-    move(1, 40 / 100.0 * 255);
+    move(FORWARD, 40 / 100.0 * 255);
 }
 
 void moveBackward() {
-    move(2, 50 / 100.0 * 255);
+    move(BACKWARDS, 50 / 100.0 * 255);
 }
 
 void turnLeft() {
-    move(3, 40 / 100.0 * 255);
+    move(LEFT, 40 / 100.0 * 255);
 }
 
 void turnRight() {
-    move(4, 40 / 100.0 * 255);
+    move(RIGHT, 40 / 100.0 * 255);
 }
 
 void collision() {
@@ -170,6 +183,22 @@ void bluetoothDriving(int nextState){
   }
 }
 
+void autoRandomTurn() {
+  int turnLeft = rand() % 2;
+  float timeToTurnInMilliSec = 800 + (rand() % 1000);
+
+  if (turnLeft) {
+    delay(500);
+    move(LEFT, 40 / 100.0 * 255);
+    delay(timeToTurnInMilliSec);
+    move(STOP, 0);
+  }else if(!turnLeft){
+    delay(500);
+    move(RIGHT, 40 / 100.0 * 255);
+    delay(timeToTurnInMilliSec);
+    move(STOP, 0);
+  }
+}
 
 void setup() {
   TCCR1A = _BV(WGM10);
@@ -181,6 +210,7 @@ void setup() {
   gyro_0.begin();
   Serial.begin(115200);
   randomSeed((unsigned long)(lightsensor_12.read() * 123456)); 
+  srand(time(NULL));
   delay(3000);
 }
 
