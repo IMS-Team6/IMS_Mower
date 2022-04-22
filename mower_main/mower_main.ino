@@ -2,8 +2,6 @@
 #include <Wire.h>
 #include <SoftwareSerial.h>
 #include <MeAuriga.h>
-#include <stdlib.h> 
-#include <time.h>
 
 typedef enum {
     FORWARD,
@@ -184,18 +182,18 @@ void bluetoothDriving(int nextState){
 }
 
 void autoRandomTurn() {
-  int turnLeft = rand() % 2;
-  float timeToTurnInMilliSec = 800 + (rand() % 1000);
+  int turnLeft = random(1);
+  float timeToTurn = random(800, 1800);
 
   if (turnLeft) {
     delay(500);
     move(LEFT, 40 / 100.0 * 255);
-    delay(timeToTurnInMilliSec);
+    delay(timeToTurn);
     move(STOP, 0);
   }else if(!turnLeft){
     delay(500);
     move(RIGHT, 40 / 100.0 * 255);
-    delay(timeToTurnInMilliSec);
+    delay(timeToTurn);
     move(STOP, 0);
   }
 }
@@ -210,7 +208,6 @@ void setup() {
   gyro_0.begin();
   Serial.begin(115200);
   randomSeed((unsigned long)(lightsensor_12.read() * 123456)); 
-  srand(time(NULL));
   delay(3000);
 }
 
