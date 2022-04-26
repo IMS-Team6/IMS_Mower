@@ -110,13 +110,6 @@ while running:
                 # threadPos = Thread(target=c.run, args=(speed, direction), daemon=1)
                 # threadPos.start()
                 # direction = 0
-            # turnRight
-                # serUSB.write(b'4')
-                # while True:
-                    # if serUSB.in_waiting > 0:
-                        # line = serUSB.readline().decode('utf-8').rstrip()
-                        # direction += float(line)
-                        # break
             # turnLeft
                 # serUSB.write(b'3')
                 # while True:
@@ -124,8 +117,15 @@ while running:
                         # line = serUSB.readline().decode('utf-8').rstrip()
                         # direction += float(line)
                         # break
+            # turnRight
+                # serUSB.write(b'4')
+                # while True:
+                    # if serUSB.in_waiting > 0:
+                        # line = serUSB.readline().decode('utf-8').rstrip()
+                        # direction += float(line)
+                        # break
             # changeMode
-                # serUSB.write(b'M')
+                # serUSB.write(b'5')
                 # mode = "Automated"  
        
        
