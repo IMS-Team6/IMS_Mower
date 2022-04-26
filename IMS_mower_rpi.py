@@ -125,6 +125,7 @@ while running:
                         # direction += float(line)
                         # break
             # changeMode
+                # serUSB.write(b'M')
                 # mode = "Automated"  
        
        
