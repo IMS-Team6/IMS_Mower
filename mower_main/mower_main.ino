@@ -4,6 +4,14 @@
 #include <MeAuriga.h>
 
 typedef enum {
+    FORWARD,
+    BACKWARDS,
+    LEFT,
+    RIGHT,
+    STOP
+} moveDirection;
+
+typedef enum {
     MOWER_IDLE = 0,
     MOWER_MAN_FORWARD,
     MOWER_MAN_BACKWARDS,
@@ -27,48 +35,63 @@ MeEncoderOnBoard motorRight(SLOT2);
 MeLightSensor lightsensor_12(12);
 MeGyro gyro_0(0, 0x69);
 
-void move(int direction, int speed)
+int distanceToObstacle = 10;
+int state = 0;
+int mode = 2;
+
+void move(moveDirection direction, int speed)
 {
   int leftSpeed = 0;
   int rightSpeed = 0;
-  if(direction == 1){
+  if(direction == FORWARD){
     leftSpeed = -speed;
     rightSpeed = speed;
-  }else if(direction == 2){
+  }else if(direction == BACKWARDS){
     leftSpeed = speed;
     rightSpeed = -speed;
-  }else if(direction == 3){
+  }else if(direction == LEFT){
     leftSpeed = -speed;
     rightSpeed = -speed;
-  }else if(direction == 4){
+  }else if(direction == RIGHT){
     leftSpeed = speed;
     rightSpeed = speed;
+  }else if(direction == STOP){
+    leftSpeed = 0;
+    rightSpeed = 0;
   }
   motorLeft.setTarPWM(leftSpeed);
   motorRight.setTarPWM(rightSpeed);
 }
 
 void moveForward() {
-    move(1, 40 / 100.0 * 255);
+    move(FORWARD, 40 / 100.0 * 255);
 }
 
 void moveBackward() {
-    move(2, 50 / 100.0 * 255);
+    move(BACKWARDS, 50 / 100.0 * 255);
 }
 
 void turnLeft() {
-    move(3, 40 / 100.0 * 255);
+    move(LEFT, 40 / 100.0 * 255);
 }
 
 void turnRight() {
-    move(4, 40 / 100.0 * 255);
+    move(RIGHT, 40 / 100.0 * 255);
 }
 
 void collision() {
     moveBackward();
-    _delay(0.5);
+    _delay(500);
     turnRight();
-    _delay(0.5);
+    _delay(500);
+}
+
+void _delay(float seconds) {
+    if (seconds < 0.0) {
+        seconds = 0.0;
+    }
+    long endTime = millis() + seconds * 1000;
+    while (millis() < endTime) _loop();
 }
 
 void isr_process_motorLeft(void)
@@ -103,6 +126,7 @@ int autonomousDriving(int currentState){
   switch(currentState){
     case 0:
     //StartMotors
+    moveForward();
     break;
 
     case 1:
@@ -112,18 +136,24 @@ int autonomousDriving(int currentState){
 
     case 2:
     //Found obstacle, handle it
+    stopMotors();
+    // take picture
     break;
 
     case 3:
     //Out of bounds, handle it
+    stopMotors();
     break;
 
     case 4:
     //Turn, handle orientation
+    autoRandomTurn();
     break;
 
     case 5:
     //Stop the robot and change mode to bt
+    stopMotors();
+    mode = 1;
     break;        
   }
   return nextState;
@@ -159,26 +189,71 @@ void bluetoothDriving(int nextState){
     
     case MOWER_CHANGEMODE:
     //Stop the robot and change mode to auto
-      break;
+    stopMotors();
+    mode = 0;
+    break;
       
     default:
         break;
   }
 }
 
+void updateState(int data) {
+
+    if (data == "1") {
+        autonomousDriving();
+    }
+    else if (data == "2") {
+        bluetoothDriving();
+    }
+    else if (data == "3") {
+        moveForward();
+    }
+    else if (data == "4") {
+        moveBackward();
+    }
+    else if (data == "5") {
+        turnLeft();
+    }
+    else if (data == "6") {
+        turnRight();
+    }
+    else if (data == "7") {
+        stopMotors();
+    }
+    else {
+        MOWER_FAULT;
+    }
+
+}
+
+void autoRandomTurn() {
+  int turnLeft = random(1);
+  float timeToTurn = random(800, 1800);
+
+  if (turnLeft) {
+    delay(500);
+    move(LEFT, 40 / 100.0 * 255);
+    delay(timeToTurn);
+    move(STOP, 0);
+  }else if(!turnLeft){
+    delay(500);
+    move(RIGHT, 40 / 100.0 * 255);
+    delay(timeToTurn);
+    move(STOP, 0);
+  }
+}
 
 void setup() {
   TCCR1A = _BV(WGM10);
   TCCR1B = _BV(CS11) | _BV(WGM12);
   TCCR2A = _BV(WGM21) | _BV(WGM20);
   TCCR2B = _BV(CS21);
-  attachInterrupt(motorLeft.getIntNum(), isr_process_encoder1, RISING);
-  attachInterrupt(motorRight.getIntNum(), isr_process_encoder2, RISING);
+  attachInterrupt(motorLeft.getIntNum(), isr_process_motorLeft, RISING);
+  attachInterrupt(motorRight.getIntNum(), isr_process_motorRight, RISING);
   gyro_0.begin();
   Serial.begin(115200);
   randomSeed((unsigned long)(lightsensor_12.read() * 123456)); 
-  int state = 0;
-  int mode = 2;
   delay(3000);
 }
 
