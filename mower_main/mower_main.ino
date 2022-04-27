@@ -81,9 +81,17 @@ void turnRight() {
 
 void collision() {
     moveBackward();
-    delay(500);
+    _delay(500);
     turnRight();
-    delay(500);
+    _delay(500);
+}
+
+void _delay(float seconds) {
+    if (seconds < 0.0) {
+        seconds = 0.0;
+    }
+    long endTime = millis() + seconds * 1000;
+    while (millis() < endTime) _loop();
 }
 
 void isr_process_motorLeft(void)
@@ -118,6 +126,7 @@ int autonomousDriving(int currentState){
   switch(currentState){
     case 0:
     //StartMotors
+    moveForward();
     break;
 
     case 1:
@@ -127,18 +136,24 @@ int autonomousDriving(int currentState){
 
     case 2:
     //Found obstacle, handle it
+    stopMotors();
+    // take picture
     break;
 
     case 3:
     //Out of bounds, handle it
+    stopMotors();
     break;
 
     case 4:
     //Turn, handle orientation
+    autoRandomTurn();
     break;
 
     case 5:
     //Stop the robot and change mode to bt
+    stopMotors();
+    mode = 1;
     break;        
   }
   return nextState;
@@ -174,11 +189,42 @@ void bluetoothDriving(int nextState){
     
     case MOWER_CHANGEMODE:
     //Stop the robot and change mode to auto
-      break;
+    stopMotors();
+    mode = 0;
+    break;
       
     default:
         break;
   }
+}
+
+void updateState(int data) {
+
+    if (data == "1") {
+        autonomousDriving();
+    }
+    else if (data == "2") {
+        bluetoothDriving();
+    }
+    else if (data == "3") {
+        moveForward();
+    }
+    else if (data == "4") {
+        moveBackward();
+    }
+    else if (data == "5") {
+        turnLeft();
+    }
+    else if (data == "6") {
+        turnRight();
+    }
+    else if (data == "7") {
+        stopMotors();
+    }
+    else {
+        MOWER_FAULT;
+    }
+
 }
 
 void autoRandomTurn() {
