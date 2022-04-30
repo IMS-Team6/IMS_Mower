@@ -4,6 +4,7 @@ from time import sleep
 import os
 import math
 from threading import Thread
+import bluetooth
 
 class CalculatePosition:
     def __init__(self):
@@ -30,25 +31,85 @@ class CalculatePosition:
             #Send data to backend here instead of printing.
             sleep(1/2)
 
-threadBT = Thread(target = os.system, args=('sudo rfcomm watch hci0', ), daemon = 1)
-threadBT.start()
-sleep(15) #Wait for connection
-serBT = serial.Serial('/dev/rfcomm0')
+class ReceiveBluetooth:
+    def __init__(self):
+        self.running = True
+        self.receivedMessage = False
+        self.message = ""
+    
+    def terminate(self):
+        self.running = False
+    
+    def run(self, client):
+        while self.running:
+            self.message = client.recv(1024)
+            if len(self.message) == 0:
+                # Lost connection
+                global mode
+                mode = "Automated"
+                print("Lost connection to application...")
+                self.terminate()
+            else:
+                self.receivedMessage = True
+
+# Bluetooth init
+def bluetoothInit():
+
+    # We need to wait until Bluetooth init is done
+    sleep(10)
+
+    # Make device visible
+    t = Thread(target = os.system, args=('sudo hciconfig hci0 piscan', ), daemon = 1)
+    t.start()
+
+    # Create a new server socket using RFCOMM protocol
+    server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+    # Bind to any port
+    server_sock.bind(("", bluetooth.PORT_ANY))
+    # Start listening
+    server_sock.listen(1)
+
+    # Get the port the server socket is listening
+    port = server_sock.getsockname()[1]
+
+    # The service UUID to advertise
+    uuid = "b2eac802-a015-49b4-8fd4-08212f5b2853"
+
+    # Start advertising the service
+    bluetooth.advertise_service(server_sock, "IMSMowerGrp6",
+                       service_id=uuid,
+                       service_classes=[uuid, bluetooth.SERIAL_PORT_CLASS],
+                       profiles=[bluetooth.SERIAL_PORT_PROFILE])
+    
+    print("Waiting for connection on RFCOMM channel %d" % port)
+    client_sock = None
+
+    # This will block until we get a new connection
+    client_sock, client_info = server_sock.accept()
+    print("Accepted connection from ", client_info)
+    return client_sock
+
+
+#Main function starts here
+app = bluetoothInit()
+bt = ReceiveBluetooth()
+threadBT = Thread(target=bt.run, args=(app), daemon=1)
 
 camera = PiCamera()
 picNmbr = 0
 
-c = CalculatePosition()
+pos = CalculatePosition()
 direction = 0
 speed = 2
-threadPos = Thread(target=c.run, args=(speed, direction), daemon=1)
+threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
 
 serUSB = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
 serUSB.reset_input_buffer()
 
-running = True
+running = True #Variable keeping track of program running
 mode = "Automated"
 reversing = False #Variable keeping track if mower is reversing when manual
+turning = False #Variable keeping track if mower is turning when manual
 
 while running:
     if mode == "Automated":
@@ -57,76 +118,97 @@ while running:
             if line == 'S':
                 #Start motors
                 direction = 0
-                threadPos = Thread(target=c.run, args=(speed, direction), daemon=1)
+                threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
                 threadPos.start()
                 serUSB.write(b'A')
 
             elif line == 'O':
                 #Obstacle encountered
-                c.terminate()
+                pos.terminate()
                 threadPos.join()
                 camera.start_preview()
                 sleep(2)
                 camera.capture('/home/pi/Desktop/images/image%s.jpg' % picNmbr)
                 picNmbr += 1
                 print('Picture captured')
+                # Send picture to backend
                 serUSB.write(b'A')
 
             elif line == 'B':
                 #Out of bounds
-                c.terminate()
+                pos.terminate()
                 threadPos.join()
-                serUSB.write(b'A')    
+                serUSB.write(b'A')  
             
             elif line[0] == 'T':
                 #Turn
-                direction += float(line[1:])
+                direction += float(line[1:-1])
                 serUSB.write(b'A')       
+        
         #Check if there is a message waiting from bluetooth
-            #If there is one, it should be to swap mower-mode. Handle it.
-            # c.terminate()
-            # threadPos.join()
-            # serUSB.write(b'M')
-            # mode = "Manual" 
+        #If there is one, it should be to swap mower-mode. Handle it.
+        if bt.receivedMessage:
+            if bt.message == "MANUAL":
+                pos.terminate()
+                threadPos.join()
+                serUSB.write(b'M')
+                mode = "Manual" 
+            bt.receivedMessage = False
+
     elif mode == "Manual":
         #Check if there is a message waiting from bluetooth
-            #If there is one, handle it
-            # stop
-                # serUSB.write(b'0')
-                # c.terminate()
-                # threadPos.join()
-                # if reversing:
-                    # c.direction += 180
-                    # reversing = False
-            # forward
-                # serUSB.write(b'1')
-                # threadPos = Thread(target=c.run, args=(speed, direction), daemon=1)
-                # threadPos.start()
-                # direction = 0
-            # backward
-                # c.direction += 180
-                # reversing = True
-                # serUSB.write(b'2')
-                # threadPos = Thread(target=c.run, args=(speed, direction), daemon=1)
-                # threadPos.start()
-                # direction = 0
-            # turnLeft
-                # serUSB.write(b'3')
-                # while True:
-                    # if serUSB.in_waiting > 0:
-                        # line = serUSB.readline().decode('utf-8').rstrip()
-                        # direction += float(line)
-                        # break
-            # turnRight
-                # serUSB.write(b'4')
-                # while True:
-                    # if serUSB.in_waiting > 0:
-                        # line = serUSB.readline().decode('utf-8').rstrip()
-                        # direction += float(line)
-                        # break
-            # changeMode
-                # serUSB.write(b'5')
-                # mode = "Automated"  
+        if bt.receivedMessage:
+            # if len(bt.message) == 0:
+            #     # Lost connection
+            #     mode = "Automated"
+            
+            if bt.message == "STOP":
+                # stop
+                serUSB.write(b'0')
+                pos.terminate()
+                threadPos.join()
+                if reversing:
+                    pos.direction += 180
+                    reversing = False
+                elif turning:
+                    while True:
+                        if serUSB.in_waiting > 0:
+                            line = serUSB.readline().decode('utf-8').rstrip()
+                            direction += float(line)
+                            serUSB.write(b'A') 
+                            turning = False
+                            break
+        
+            elif bt.message == "FORWARD":    
+                # forward
+                serUSB.write(b'1')
+                threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
+                threadPos.start()
+                direction = 0
+            
+            elif bt.message == "REVERSE":  
+                # backward      
+                pos.direction += 180
+                reversing = True
+                serUSB.write(b'2')
+                threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
+                threadPos.start()
+                direction = 0
+                
+            elif bt.message == "LEFT":    
+                # turnLeft
+                serUSB.write(b'3')
+                turning = True
+            elif bt.message == "RIGHT":
+                # turnRight
+                serUSB.write(b'4')
+                turning = True
+            elif bt.message == "AUTO":    
+                # changeMode
+                serUSB.write(b'5')
+                mode = "Automated"
+            
+            bt.receivedMessage = False  
        
        
        
