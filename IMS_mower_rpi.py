@@ -35,7 +35,7 @@ class ReceiveBluetooth:
     def __init__(self):
         self.running = True
         self.receivedMessage = False
-        self.message = ""
+        self.message = " "
     
     def terminate(self):
         self.running = False
@@ -90,23 +90,30 @@ def bluetoothInit():
     return client_sock
 
 
+
 #Main function starts here
+#Init bluetoothconnection
 app = bluetoothInit()
 bt = ReceiveBluetooth()
 threadBT = Thread(target=bt.run, args=(app), daemon=1)
 
+#Init Camera
 camera = PiCamera()
 picNmbr = 0
 
+#Init Positioning
 pos = CalculatePosition()
 direction = 0
 speed = 2
 threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
 
+#Init connection to Mower
 serUSB = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
 serUSB.reset_input_buffer()
 
+#Variables used in statemachines
 running = True #Variable keeping track of program running
+global mode
 mode = "Automated"
 reversing = False #Variable keeping track if mower is reversing when manual
 turning = False #Variable keeping track if mower is turning when manual
@@ -117,8 +124,8 @@ while running:
             line = serUSB.readline().decode('utf-8').rstrip()
             if line == 'S':
                 #Start motors
-                direction = 0
                 threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
+                direction = 0
                 threadPos.start()
                 serUSB.write(b'A')
 
@@ -146,7 +153,6 @@ while running:
                 serUSB.write(b'A')       
         
         #Check if there is a message waiting from bluetooth
-        #If there is one, it should be to swap mower-mode. Handle it.
         if bt.receivedMessage:
             if bt.message == "MANUAL":
                 pos.terminate()
