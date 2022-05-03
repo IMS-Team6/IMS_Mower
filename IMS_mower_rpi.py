@@ -4,6 +4,7 @@ from time import sleep
 import os
 import math
 from threading import Thread
+import datetime
 import bluetooth
 
 class CalculatePosition:
@@ -19,7 +20,8 @@ class CalculatePosition:
     #speed is about 8/34 m/s => 0.235m/s
     def run(self, speed, newDirection):
         self._running = True
-        self.direction += newDirection
+        # self.direction += newDirection
+        self.direction = newDirection
         if self.direction > 360:
             self.direction -= 360
         while self._running:
@@ -97,6 +99,9 @@ app = bluetoothInit()
 bt = ReceiveBluetooth()
 threadBT = Thread(target=bt.run, args=(app), daemon=1)
 
+#Create sessionID
+sessionID = datetime.datetime.now().strftime("%y%m%d%H%M%S")
+
 #Init Camera
 camera = PiCamera()
 picNmbr = 0
@@ -105,7 +110,7 @@ picNmbr = 0
 pos = CalculatePosition()
 direction = 0
 speed = 2
-threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
+# Send the first position to backend here (Session started at 0,0)
 
 #Init connection to Mower
 serUSB = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
@@ -125,7 +130,7 @@ while running:
             if line == 'S':
                 #Start motors
                 threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
-                direction = 0
+                # direction = 0
                 threadPos.start()
                 serUSB.write(b'A')
 
@@ -149,7 +154,8 @@ while running:
             
             elif line[0] == 'T':
                 #Turn
-                direction += float(line[1:-1])
+                #direction += int(line[1:-1])
+                direction = int(line[1:-1])
                 serUSB.write(b'A')       
         
         #Check if there is a message waiting from bluetooth
@@ -180,7 +186,8 @@ while running:
                     while True:
                         if serUSB.in_waiting > 0:
                             line = serUSB.readline().decode('utf-8').rstrip()
-                            direction += float(line)
+                            # direction += float(line)
+                            direction = float(line)
                             serUSB.write(b'A') 
                             turning = False
                             break
@@ -190,7 +197,7 @@ while running:
                 serUSB.write(b'1')
                 threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
                 threadPos.start()
-                direction = 0
+                # direction = 0
             
             elif bt.message == "REVERSE":  
                 # backward      
@@ -199,7 +206,7 @@ while running:
                 serUSB.write(b'2')
                 threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
                 threadPos.start()
-                direction = 0
+                # direction = 0
                 
             elif bt.message == "LEFT":    
                 # turnLeft

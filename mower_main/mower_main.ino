@@ -131,11 +131,22 @@ int checkSensors(){
   }
 }
 
+String getOrientation(){
+  gyro_0.update();
+  int angle = (int) gyro_0.getAngle(3);
+  if(angle < 0){
+    angle += 360;
+  }
+  return String(angle);
+}
+
 void receiveAck(){
   while(1){
     if(Serial.available() > 0){
       char data = Serial.read();
-      break;
+      if(data == 'A'){
+        break;
+      }
     }
   }
 }
@@ -175,7 +186,7 @@ int autonomousDriving(int currentState){
     case 4:
       //Turn, handle orientation
       autoRandomTurn();
-      Serial.println("T "); //Add the rounded value of new direction
+      Serial.println("T" + getOrientation()); //Add the rounded value of new direction
       //receiveAck();
       nextState = 0;
       break;
@@ -187,7 +198,7 @@ int autonomousDriving(int currentState){
       //receiveAck();
       mode = 1;   //Change to manual
       //state = 0;  //Initial value for next mode
-      break;        
+      break;
   }
   return nextState;
 }
@@ -200,6 +211,7 @@ void bluetoothDriving(char nextState){
       if(turnFlag == 1){
         //Read gyro
         //Send gyro data to rpi.
+        Serial.println("T" + getOrientation());
         //receiveAck();
         turnFlag = 0;
         
@@ -249,7 +261,7 @@ void setup() {
   gyro_0.begin();
   Serial.begin(115200);
   randomSeed((unsigned long)(lightsensor_12.read() * 123456)); 
-  delay(3000);
+  _delay(3);
 }
 
 void _loop() {
