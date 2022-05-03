@@ -3,13 +3,13 @@
 #include <SoftwareSerial.h>
 #include <MeAuriga.h>
 
-typedef enum {
+typedef enum Direction{
     FORWARD,
     BACKWARDS,
     LEFT,
     RIGHT,
     STOP
-} moveDirection;
+} Direction;
 
 typedef enum {
     MOWER_IDLE = 0,
@@ -36,12 +36,12 @@ MeGyro gyro_0(0, 0x69);
 MeRGBLed rgbLED(0, 12);
 
 int distanceToObstacle = 10;
-int autoTurnDirection = 0;
+Direction autoTurnDirection = STOP;
 int state = 0;
 int autoState = 0;
 int mode = 0;
 
-void move(moveDirection direction, int speed)
+void move(Direction direction, int speed)
 {
   int leftSpeed = 0;
   int rightSpeed = 0;
@@ -112,27 +112,32 @@ void isr_process_motorRight(void){
 int checkSensors(){
   if(ultrasonic_10.distanceCm() <= distanceToObstacle){
     return 2;
-  }else if(linefollower_9.readSensors() != 3){
+  }else if(linefollower_9.readSensors() == 1){
+    autoTurnDirection = RIGHT;
+  }else if(linefollower_9.readSensors() == 2){
+    autoTurnDirection = LEFT;
+  }else if(linefollower_9.readSensors() == 0){
     return 3;
   }else{
     return 1;
   }
 }
 
-void autoRandomTurn() {
-  int left = random(1);
+void autoTurn() {
   float turnDuration = random(800, 1800);
 
-  if (left) {
+  if (autoTurnDirection == LEFT) {
     delay(500);
     turnLeft();
     delay(turnDuration);
     stopMotors();
-  }else if(!left){
+    autoTurnDirection = STOP;
+  }else if(autoTurnDirection == RIGHT){
     delay(500);
     turnRight();
     delay(turnDuration);
     stopMotors();
+    autoTurnDirection = STOP;
   }
 }
 
@@ -168,7 +173,7 @@ int autonomousDriving(int currentState){
 
     case 4:
     //Turn, handle orientation
-    autoRandomTurn();
+    autoTurn();
     autoState = 0;
     break;
 
