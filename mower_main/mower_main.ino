@@ -27,17 +27,19 @@ void turnLeft();
 void turnRight();
 void stopMotors();
 
-
 MeLineFollower linefollower_9(9);
 MeUltrasonicSensor ultrasonic_10(10);
 MeEncoderOnBoard motorLeft(SLOT1);
 MeEncoderOnBoard motorRight(SLOT2);
 MeLightSensor lightsensor_12(12);
 MeGyro gyro_0(0, 0x69);
+MeRGBLed rgbLED(0, 12);
 
 int distanceToObstacle = 10;
+int autoTurnDirection = 0;
 int state = 0;
-int mode = 2;
+int autoState = 0;
+int mode = 0;
 
 void move(moveDirection direction, int speed)
 {
@@ -63,39 +65,43 @@ void move(moveDirection direction, int speed)
   motorRight.setTarPWM(rightSpeed);
 }
 
+void _delay(float milliSeconds) {
+  if(milliSeconds < 0.0){
+    milliSeconds = 0.0;
+  }
+  long endTime = millis() + milliSeconds;
+  while(millis() < endTime) _loop();
+}
+
 void moveForward() {
-    move(FORWARD, 40 / 100.0 * 255);
+  move(FORWARD, 40 / 100.0 * 255);
 }
 
 void moveBackward() {
-    move(BACKWARDS, 50 / 100.0 * 255);
+  move(BACKWARDS, 40 / 100.0 * 255);
 }
 
 void turnLeft() {
-    move(LEFT, 40 / 100.0 * 255);
+  move(LEFT, 40 / 100.0 * 255);
 }
 
 void turnRight() {
-    move(RIGHT, 40 / 100.0 * 255);
+  move(RIGHT, 40 / 100.0 * 255);
 }
 
-void collision() {
-    moveBackward();
-    delay(500);
-    turnRight();
-    delay(500);
+void stopMotors() {
+  move(STOP, 0);
 }
 
-void isr_process_motorLeft(void)
-{
+void isr_process_motorLeft(void){
   if(digitalRead(motorLeft.getPortB()) == 0){
     motorLeft.pulsePosMinus();
   }else{
     motorLeft.pulsePosPlus();
   }
 }
-void isr_process_motorRight(void)
-{
+
+void isr_process_motorRight(void){
   if(digitalRead(motorRight.getPortB()) == 0){
     motorRight.pulsePosMinus();
   }else{
@@ -106,35 +112,64 @@ void isr_process_motorRight(void)
 int checkSensors(){
   if(ultrasonic_10.distanceCm() <= distanceToObstacle){
     return 2;
-  }else if(linefollower_9.readSensors()!=3){
+  }else if(linefollower_9.readSensors() != 3){
     return 3;
   }else{
     return 1;
   }
 }
 
+void autoRandomTurn() {
+  int left = random(1);
+  float turnDuration = random(800, 1800);
+
+  if (left) {
+    delay(500);
+    turnLeft();
+    delay(turnDuration);
+    stopMotors();
+  }else if(!left){
+    delay(500);
+    turnRight();
+    delay(turnDuration);
+    stopMotors();
+  }
+}
+
 int autonomousDriving(int currentState){
   int nextState = 0;
-  switch(currentState){
+
+  rgbLED.setColor(0,0,0,100);
+  rgbLED.show();
+  
+  switch(autoState){
     case 0:
     //StartMotors
+    moveForward();
+    autoState = 1;
     break;
 
     case 1:
     //Check sensors while driving forward
-    nextState = checkSensors(); 
+    autoState = checkSensors(); 
     break;
 
     case 2:
     //Found obstacle, handle it
+    stopMotors();
+    autoState = 4;
     break;
 
     case 3:
     //Out of bounds, handle it
+    stopMotors();
+    autoState = 4;
     break;
 
     case 4:
     //Turn, handle orientation
+    autoRandomTurn();
+    autoState = 0;
     break;
 
     case 5:
@@ -181,23 +216,6 @@ void bluetoothDriving(int nextState){
   }
 }
 
-void autoRandomTurn() {
-  int turnLeft = random(1);
-  float timeToTurn = random(800, 1800);
-
-  if (turnLeft) {
-    delay(500);
-    move(LEFT, 40 / 100.0 * 255);
-    delay(timeToTurn);
-    move(STOP, 0);
-  }else if(!turnLeft){
-    delay(500);
-    move(RIGHT, 40 / 100.0 * 255);
-    delay(timeToTurn);
-    move(STOP, 0);
-  }
-}
-
 void setup() {
   TCCR1A = _BV(WGM10);
   TCCR1B = _BV(CS11) | _BV(WGM12);
@@ -206,6 +224,8 @@ void setup() {
   attachInterrupt(motorLeft.getIntNum(), isr_process_motorLeft, RISING);
   attachInterrupt(motorRight.getIntNum(), isr_process_motorRight, RISING);
   gyro_0.begin();
+  rgbLED.setpin(44);
+  rgbLED.fillPixelsBak(0, 2, 1);
   Serial.begin(115200);
   randomSeed((unsigned long)(lightsensor_12.read() * 123456)); 
   delay(3000);
@@ -228,6 +248,7 @@ void loop() {
 
     case 2:
     //Standby
+    
     break;
 
     default:
