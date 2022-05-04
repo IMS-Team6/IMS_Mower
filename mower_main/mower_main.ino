@@ -41,6 +41,15 @@ char bluetoothState;
 int mode = 2;
 int turnFlag = 0;
 
+
+void _delay(float seconds) {
+  if(seconds < 0.0){
+    seconds = 0.0;
+  }
+  long endTime = millis() + seconds * 1000;
+  while(millis() < endTime) _loop();
+}
+
 void move(moveDirection direction, int speed)
 {
   int leftSpeed = 0;
@@ -79,6 +88,10 @@ void turnLeft() {
 
 void turnRight() {
     move(RIGHT, 40 / 100.0 * 255);
+}
+
+void stopMotors() {
+    move(STOP, 0);
 }
 
 void collision() {
@@ -210,8 +223,7 @@ void bluetoothDriving(char nextState){
       //Stop
       stopMotors();
       if(turnFlag == 1){
-        //Read gyro
-        //Send gyro data to rpi.
+        //Read gyro and send data to rpi
         Serial.println("T" + getOrientation());
         //receiveAck();
         turnFlag = 0;

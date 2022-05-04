@@ -134,7 +134,7 @@ while running:
                     threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
                     # direction = 0
                     threadPos.start()
-                    serUSB.write(b'A')
+                    #serUSB.write(b'A')
 
                 elif line == 'O':
                     #Obstacle encountered
@@ -146,19 +146,19 @@ while running:
                     picNmbr += 1
                     print('Picture captured')
                     # Send picture to backend
-                    serUSB.write(b'A')
+                    #serUSB.write(b'A')
 
                 elif line == 'B':
                     #Out of bounds
                     pos.terminate()
                     threadPos.join()
-                    serUSB.write(b'A')  
+                    #serUSB.write(b'A')  
                 
                 elif line[0] == 'T':
                     #Turn
                     #direction += int(line[1:-1])
                     direction = int(line[1:-1])
-                    serUSB.write(b'A')       
+                    #serUSB.write(b'A')       
             
             #Check if there is a message waiting from bluetooth
             if bt.receivedMessage:
