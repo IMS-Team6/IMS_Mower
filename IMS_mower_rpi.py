@@ -65,6 +65,7 @@ def bluetoothInit():
     t.start()
 
     # Create a new server socket using RFCOMM protocol
+    global server_sock
     server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
     # Bind to any port
     server_sock.bind(("", bluetooth.PORT_ANY))
@@ -95,9 +96,9 @@ def bluetoothInit():
 
 #Main function starts here
 #Init bluetoothconnection
-app = bluetoothInit()
+app_sock = bluetoothInit()
 bt = ReceiveBluetooth()
-threadBT = Thread(target=bt.run, args=(app), daemon=1)
+threadBT = Thread(target=bt.run, args=(app_sock), daemon=1)
 
 #Create sessionID
 sessionID = datetime.datetime.now().strftime("%y%m%d%H%M%S")
@@ -124,133 +125,104 @@ reversing = False #Variable keeping track if mower is reversing when manual
 turning = False #Variable keeping track if mower is turning when manual
 
 while running:
-    if mode == "Automated":
-        if serUSB.in_waiting > 0:
-            line = serUSB.readline().decode('utf-8').rstrip()
-            if line == 'S':
-                #Start motors
-                threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
-                # direction = 0
-                threadPos.start()
-                serUSB.write(b'A')
+    try:
+        if mode == "Automated":
+            if serUSB.in_waiting > 0:
+                line = serUSB.readline().decode('utf-8').rstrip()
+                if line == 'S':
+                    #Start motors
+                    threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
+                    # direction = 0
+                    threadPos.start()
+                    serUSB.write(b'A')
 
-            elif line == 'O':
-                #Obstacle encountered
-                pos.terminate()
-                threadPos.join()
-                camera.start_preview()
-                sleep(2)
-                camera.capture('/home/pi/Desktop/images/image%s.jpg' % picNmbr)
-                picNmbr += 1
-                print('Picture captured')
-                # Send picture to backend
-                serUSB.write(b'A')
+                elif line == 'O':
+                    #Obstacle encountered
+                    pos.terminate()
+                    threadPos.join()
+                    camera.start_preview()
+                    sleep(2)
+                    camera.capture('/home/pi/Desktop/images/image%s.jpg' % picNmbr)
+                    picNmbr += 1
+                    print('Picture captured')
+                    # Send picture to backend
+                    serUSB.write(b'A')
 
-            elif line == 'B':
-                #Out of bounds
-                pos.terminate()
-                threadPos.join()
-                serUSB.write(b'A')  
-            
-            elif line[0] == 'T':
-                #Turn
-                #direction += int(line[1:-1])
-                direction = int(line[1:-1])
-                serUSB.write(b'A')       
-        
-        #Check if there is a message waiting from bluetooth
-        if bt.receivedMessage:
-            if bt.message == "MANUAL":
-                pos.terminate()
-                threadPos.join()
-                serUSB.write(b'M')
-                mode = "Manual" 
-            bt.receivedMessage = False
-
-    elif mode == "Manual":
-        #Check if there is a message waiting from bluetooth
-        if bt.receivedMessage:
-            # if len(bt.message) == 0:
-            #     # Lost connection
-            #     mode = "Automated"
-            
-            if bt.message == "STOP":
-                # stop
-                serUSB.write(b'0')
-                pos.terminate()
-                threadPos.join()
-                if reversing:
-                    pos.direction += 180
-                    reversing = False
-                elif turning:
-                    while True:
-                        if serUSB.in_waiting > 0:
-                            line = serUSB.readline().decode('utf-8').rstrip()
-                            # direction += float(line)
-                            direction = float(line)
-                            serUSB.write(b'A') 
-                            turning = False
-                            break
-        
-            elif bt.message == "FORWARD":    
-                # forward
-                serUSB.write(b'1')
-                threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
-                threadPos.start()
-                # direction = 0
-            
-            elif bt.message == "REVERSE":  
-                # backward      
-                pos.direction += 180
-                reversing = True
-                serUSB.write(b'2')
-                threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
-                threadPos.start()
-                # direction = 0
+                elif line == 'B':
+                    #Out of bounds
+                    pos.terminate()
+                    threadPos.join()
+                    serUSB.write(b'A')  
                 
-            elif bt.message == "LEFT":    
-                # turnLeft
-                serUSB.write(b'3')
-                turning = True
-            elif bt.message == "RIGHT":
-                # turnRight
-                serUSB.write(b'4')
-                turning = True
-            elif bt.message == "AUTO":    
-                # changeMode
-                serUSB.write(b'5')
-                mode = "Automated"
+                elif line[0] == 'T':
+                    #Turn
+                    #direction += int(line[1:-1])
+                    direction = int(line[1:-1])
+                    serUSB.write(b'A')       
             
-            bt.receivedMessage = False  
-       
-       
-       
-       
-        """"
-        match line:
-            
-            case 'Obstacle encountered':
-                c.terminate()
-                t.join()
-                camera.start_preview()
-                sleep(2)
-                camera.capture('/home/pi/Desktop/images/image%s.jpg' % picNmbr)
-                picNmbr += 1
-                print('Picture captured')
-            
-            case line if line.startswith('Turn'):
-                direction = float(line[5:])
-                #ITSAFLOAT!!!!!
-            
-            case 'Run':
-                t = Thread(target=c.run, args=(speed, direction), daemon=1)
-                t.start()
-            
-            case 'Out of bounds':
-                c.terminate()
-                t.join()
+            #Check if there is a message waiting from bluetooth
+            if bt.receivedMessage:
+                if bt.message == "MANUAL":
+                    pos.terminate()
+                    threadPos.join()
+                    serUSB.write(b'M')
+                    mode = "Manual" 
+                bt.receivedMessage = False
 
-        ser.write(b'Ack\n')   
-        #SEND ACK TO ARDUINO, ARDUINO SHOULD WAIT FOR ACK BEFORE CONTINUING!!!!!
-        #This enables the arduino to wait for the rpi to finish what its doing ex: taking picture.
-        """
+        elif mode == "Manual":
+            #Check if there is a message waiting from bluetooth
+            if bt.receivedMessage:                
+                if bt.message == "STOP":
+                    # stop
+                    serUSB.write(b'0')
+                    pos.terminate()
+                    threadPos.join()
+                    #If the mower were reversing in previous state
+                    if reversing:
+                        pos.direction += 180
+                        reversing = False
+                    #If mower were turning in previous state
+                    elif turning:
+                        while True:
+                            if serUSB.in_waiting > 0:
+                                line = serUSB.readline().decode('utf-8').rstrip()
+                                # direction += float(line)
+                                direction = float(line)
+                                serUSB.write(b'A') 
+                                turning = False
+                                break          
+                elif bt.message == "FORWARD":    
+                    # forward
+                    serUSB.write(b'1')
+                    threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
+                    threadPos.start()
+                    # direction = 0               
+                elif bt.message == "REVERSE":  
+                    # backward      
+                    pos.direction += 180
+                    reversing = True
+                    serUSB.write(b'2')
+                    threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
+                    threadPos.start()
+                    # direction = 0                   
+                elif bt.message == "LEFT":    
+                    # turnLeft
+                    serUSB.write(b'3')
+                    turning = True
+                elif bt.message == "RIGHT":
+                    # turnRight
+                    serUSB.write(b'4')
+                    turning = True
+                elif bt.message == "AUTO":    
+                    # changeMode
+                    serUSB.write(b'5')
+                    mode = "Automated"
+                
+                bt.receivedMessage = False  
+    
+    except KeyboardInterrupt:
+            if app_sock is not None:
+                app_sock.close()
+            server_sock.close()
+            print("Server going down")
+            running = False   
