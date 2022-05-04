@@ -36,7 +36,8 @@ MeLightSensor lightsensor_12(12);
 MeGyro gyro_0(0, 0x69);
 
 int distanceToObstacle = 10;
-int state = 0;
+int autoState = 0;
+char bluetoothState;
 int mode = 2;
 int turnFlag = 0;
 
@@ -275,17 +276,17 @@ void loop() {
       if(Serial.available() > 0){
         char data = Serial.read();
         if(data == 'M'){
-          state = 5;
+          autoState = 5;
         }
       }else{
-        state = autonomousDriving(state);
+        autoState = autonomousDriving(autoState);
       }
       break;
 
     case 1:
     if(Serial.available() > 0){
-      char state = Serial.read();
-      bluetoothDriving(state);
+      char bluetoothState = Serial.read();
+      bluetoothDriving(bluetoothState);
     }
     break;
 
