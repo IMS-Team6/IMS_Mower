@@ -12,12 +12,12 @@ typedef enum {
 } moveDirection;
 
 typedef enum {
-    MOWER_IDLE = 0,
-    MOWER_MAN_FORWARD,
-    MOWER_MAN_BACKWARDS,
-    MOWER_MAN_LEFT,
-    MOWER_MAN_RIGHT,
-    MOWER_CHANGEMODE
+    MOWER_IDLE = '0',
+    MOWER_MAN_FORWARD = '1',
+    MOWER_MAN_BACKWARDS = '2',
+    MOWER_MAN_LEFT = '3',
+    MOWER_MAN_RIGHT = '4',
+    MOWER_CHANGEMODE = '5'
 } mowerState_t;
 
 // functions for moving the robot
@@ -36,8 +36,22 @@ MeLightSensor lightsensor_12(12);
 MeGyro gyro_0(0, 0x69);
 
 int distanceToObstacle = 10;
-int state = 0;
-int mode = 2;
+int autoState = 0;
+char bluetoothState;
+int mode = 0;
+int turnFlag = 0;
+
+
+void _delay(float seconds) {
+  if(seconds < 0.0){
+    seconds = 0.0;
+  }
+  long endTime = millis() + seconds * 1000;
+  while(millis() < endTime){
+    _loop();
+    gyro_0.update();
+  }
+}
 
 void move(moveDirection direction, int speed)
 {
@@ -68,15 +82,19 @@ void moveForward() {
 }
 
 void moveBackward() {
-    move(BACKWARDS, 50 / 100.0 * 255);
+    move(BACKWARDS, 40 / 100.0 * 255);
 }
 
 void turnLeft() {
-    move(LEFT, 40 / 100.0 * 255);
+    move(LEFT, 20 / 100.0 * 255);
 }
 
 void turnRight() {
-    move(RIGHT, 40 / 100.0 * 255);
+    move(RIGHT, 20 / 100.0 * 255);
+}
+
+void stopMotors() {
+    move(STOP, 0);
 }
 
 void collision() {
@@ -84,6 +102,23 @@ void collision() {
     delay(500);
     turnRight();
     delay(500);
+}
+
+void autoRandomTurn() {
+  int turnLeft = random(1);
+  float timeToTurn = random(800, 1800);
+
+  if (turnLeft) {
+    //delay(500);
+    move(LEFT, 40 / 100.0 * 255);
+    _delay(timeToTurn / 1000);
+    move(STOP, 0);
+  }else if(!turnLeft){
+    //delay(500);
+    move(RIGHT, 40 / 100.0 * 255);
+    _delay(timeToTurn / 1000);
+    move(STOP, 0);
+  }
 }
 
 void isr_process_motorLeft(void)
@@ -113,88 +148,124 @@ int checkSensors(){
   }
 }
 
+String getOrientation(){
+  gyro_0.update();
+  int angle = (int) gyro_0.getAngleZ();
+  if(angle < 0){
+    angle += 360;
+  }
+  return String(angle);
+}
+
+void receiveAck(){
+  while(1){
+    if(Serial.available() > 0){
+      char data = Serial.read();
+      if(data == 'A'){
+        break;
+      }
+    }
+  }
+}
+
 int autonomousDriving(int currentState){
   int nextState = 0;
   switch(currentState){
     case 0:
-    //StartMotors
-    break;
+      //StartMotors
+      moveForward();
+      Serial.println('S');
+      receiveAck();
+      nextState = 1;
+      break;
 
     case 1:
-    //Check sensors while driving forward
-    nextState = checkSensors(); 
-    break;
+      //Check sensors while driving forward
+      nextState = checkSensors(); 
+      break;
 
     case 2:
-    //Found obstacle, handle it
-    break;
+      //Found obstacle, handle it
+      move(STOP, 0);
+      Serial.println('O');
+      receiveAck();
+      nextState = 4;
+      break;
 
     case 3:
-    //Out of bounds, handle it
-    break;
+      //Out of bounds, handle it
+      move(STOP, 0);
+      Serial.println('B');
+      receiveAck();
+      nextState = 4;
+      break;
 
     case 4:
-    //Turn, handle orientation
-    break;
+      //Turn, handle orientation
+      autoRandomTurn();
+      Serial.println("T" + getOrientation()); //Add the rounded value of new direction
+      _delay(5);
+      receiveAck();
+      nextState = 0;
+      break;
 
     case 5:
-    //Stop the robot and change mode to bt
-    break;        
+      //Stop the robot and change mode to manual
+      move(STOP, 0);
+      Serial.println('B');
+      receiveAck();
+      mode = 1;   //Change to manual
+      //state = 0;  //Initial value for next mode
+      break;
   }
   return nextState;
 }
 
-void bluetoothDriving(int nextState){
+void bluetoothDriving(char nextState){
   switch(nextState){
     case MOWER_IDLE:
-    //Stop
-    stopMotors();
-
+      //Stop
+      stopMotors();
+      if(turnFlag == 1){
+        //Read gyro and send data to rpi
+        Serial.println("T" + getOrientation());
+        //receiveAck();
+        turnFlag = 0;
+        
+      }
     break;
 
     case MOWER_MAN_FORWARD:
-    //Drive forward
-    moveForward();
-    break;
+      //Drive forward
+      moveForward();
+      break;
 
     case MOWER_MAN_BACKWARDS:
-    //Drive backward
-    moveBackward();
-    break;
+      //Drive backward
+      moveBackward();
+      break;
 
     case MOWER_MAN_LEFT:
-    //Turn left
-    turnLeft();
-    break;
+      //Turn left
+      turnLeft();
+      turnFlag = 1;
+      break;
 
     case MOWER_MAN_RIGHT:
-    //Turn right
-    turnRight();
-    break;
+      //Turn right
+      turnRight();
+      turnFlag = 1;
+      break;
     
     case MOWER_CHANGEMODE:
-    //Stop the robot and change mode to auto
+      //Stop the robot and change mode to auto
+      mode = 0;
+      autoState = 0;
       break;
       
     default:
-        break;
-  }
-}
-
-void autoRandomTurn() {
-  int turnLeft = random(1);
-  float timeToTurn = random(800, 1800);
-
-  if (turnLeft) {
-    delay(500);
-    move(LEFT, 40 / 100.0 * 255);
-    delay(timeToTurn);
-    move(STOP, 0);
-  }else if(!turnLeft){
-    delay(500);
-    move(RIGHT, 40 / 100.0 * 255);
-    delay(timeToTurn);
-    move(STOP, 0);
+      //Weird data
+      break;
   }
 }
 
@@ -208,7 +279,7 @@ void setup() {
   gyro_0.begin();
   Serial.begin(115200);
   randomSeed((unsigned long)(lightsensor_12.read() * 123456)); 
-  delay(3000);
+  _delay(3);
 }
 
 void _loop() {
@@ -217,13 +288,26 @@ void _loop() {
 }
 
 void loop() {
+  gyro_0.update();
   switch(mode){
     case 0:
-    state = autonomousDriving(state);
-    break;
+      //Autonomous
+      if(Serial.available() > 0){
+        char data = Serial.read();
+        if(data == 'M'){
+          autoState = 5;
+        }
+      }else{
+        autoState = autonomousDriving(autoState);
+      }
+      break;
 
     case 1:
-    bluetoothDriving(state);
+      //Manual
+      if(Serial.available() > 0){
+        char bluetoothState = Serial.read();
+        bluetoothDriving(bluetoothState);
+      }
     break;
 
     case 2:
