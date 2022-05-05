@@ -13,6 +13,7 @@ class CalculatePosition:
         self.x = 0
         self.y = 0
         self.direction = 0
+        self.messagesPerSecond = 1.0
     
     def terminate(self):
         self._running = False
@@ -25,13 +26,13 @@ class CalculatePosition:
         if self.direction > 360:
             self.direction -= 360
         while self._running:
-            self.x += speed/2 * math.cos((math.pi/2.0) - math.radians(self.direction))
-            self.y += speed/2 * math.sin((math.pi/2) - math.radians(self.direction))
+            self.x += speed/self.messagesPerSecond * math.cos((math.pi/2.0) - math.radians(self.direction))
+            self.y += speed/self.messagesPerSecond * math.sin((math.pi/2.0) - math.radians(self.direction))
             #Round values to whatever backend wants.
-            print(self.x)
-            print(self.y)
+            print(int(self.x))
+            print(int(self.y))
             #Send data to backend here instead of printing.
-            sleep(1/2)
+            sleep(1/self.messagesPerSecond)
 
 class ReceiveBluetooth:
     def __init__(self):
@@ -53,6 +54,8 @@ class ReceiveBluetooth:
                 self.terminate()
             else:
                 self.receivedMessage = True
+                #For testing purposes
+                print(self.receivedMessage)
 
 # Bluetooth init
 def bluetoothInit():
@@ -110,7 +113,7 @@ picNmbr = 0
 #Init Positioning
 pos = CalculatePosition()
 direction = 0
-speed = 2
+speed = 20
 # Send the first position to backend here (Session started at 0,0)
 
 #Init connection to Mower
