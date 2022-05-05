@@ -34,74 +34,74 @@ class CalculatePosition:
             #Send data to backend here instead of printing.
             sleep(1/self.messagesPerSecond)
 
-class ReceiveBluetooth:
-    def __init__(self):
-        self.running = True
-        self.receivedMessage = False
-        self.message = " "
+# class ReceiveBluetooth:
+#     def __init__(self):
+#         self.running = True
+#         self.receivedMessage = False
+#         self.message = " "
     
-    def terminate(self):
-        self.running = False
+#     def terminate(self):
+#         self.running = False
     
-    def run(self, client):
-        while self.running:
-            self.message = client.recv(1024)
-            if len(self.message) == 0:
-                # Lost connection
-                global mode
-                mode = "Automated"
-                print("Lost connection to application...")
-                self.terminate()
-            else:
-                self.receivedMessage = True
-                #For testing purposes
-                print(self.receivedMessage)
+#     def run(self, client):
+#         while self.running:
+#             self.message = client.recv(1024)
+#             if len(self.message) == 0:
+#                 # Lost connection
+#                 global mode
+#                 mode = "Automated"
+#                 print("Lost connection to application...")
+#                 self.terminate()
+#             else:
+#                 self.receivedMessage = True
+#                 #For testing purposes
+#                 print(self.receivedMessage)
 
 # Bluetooth init
-def bluetoothInit():
+# def bluetoothInit():
 
-    # We need to wait until Bluetooth init is done
-    sleep(10)
+#     # We need to wait until Bluetooth init is done
+#     sleep(10)
 
-    # Make device visible
-    t = Thread(target = os.system, args=('sudo hciconfig hci0 piscan', ), daemon = 1)
-    t.start()
+#     # Make device visible
+#     t = Thread(target = os.system, args=('sudo hciconfig hci0 piscan', ), daemon = 1)
+#     t.start()
 
-    # Create a new server socket using RFCOMM protocol
-    global server_sock
-    server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
-    # Bind to any port
-    server_sock.bind(("", bluetooth.PORT_ANY))
-    # Start listening
-    server_sock.listen(1)
+#     # Create a new server socket using RFCOMM protocol
+#     global server_sock
+#     server_sock = bluetooth.BluetoothSocket(bluetooth.RFCOMM)
+#     # Bind to any port
+#     server_sock.bind(("", bluetooth.PORT_ANY))
+#     # Start listening
+#     server_sock.listen(1)
 
-    # Get the port the server socket is listening
-    port = server_sock.getsockname()[1]
+#     # Get the port the server socket is listening
+#     port = server_sock.getsockname()[1]
 
-    # The service UUID to advertise
-    uuid = "b2eac802-a015-49b4-8fd4-08212f5b2853"
+#     # The service UUID to advertise
+#     uuid = "b2eac802-a015-49b4-8fd4-08212f5b2853"
 
-    # Start advertising the service
-    bluetooth.advertise_service(server_sock, "IMSMowerGrp6",
-                       service_id=uuid,
-                       service_classes=[uuid, bluetooth.SERIAL_PORT_CLASS],
-                       profiles=[bluetooth.SERIAL_PORT_PROFILE])
+#     # Start advertising the service
+#     bluetooth.advertise_service(server_sock, "IMSMowerGrp6",
+#                        service_id=uuid,
+#                        service_classes=[uuid, bluetooth.SERIAL_PORT_CLASS],
+#                        profiles=[bluetooth.SERIAL_PORT_PROFILE])
     
-    print("Waiting for connection on RFCOMM channel %d" % port)
-    client_sock = None
+#     print("Waiting for connection on RFCOMM channel %d" % port)
+#     client_sock = None
 
-    # This will block until we get a new connection
-    client_sock, client_info = server_sock.accept()
-    print("Accepted connection from ", client_info)
-    return client_sock
+#     # This will block until we get a new connection
+#     client_sock, client_info = server_sock.accept()
+#     print("Accepted connection from ", client_info)
+#     return client_sock
 
 
 
 #Main function starts here
 #Init bluetoothconnection
-app_sock = bluetoothInit()
-bt = ReceiveBluetooth()
-threadBT = Thread(target=bt.run, args=(app_sock), daemon=1)
+# app_sock = bluetoothInit()
+# bt = ReceiveBluetooth()
+# threadBT = Thread(target=bt.run, args=(app_sock), daemon=1)
 
 #Create sessionID
 sessionID = datetime.datetime.now().strftime("%y%m%d%H%M%S")
@@ -123,7 +123,7 @@ serUSB.reset_input_buffer()
 #Variables used in statemachines
 running = True #Variable keeping track of program running
 global mode
-mode = "Manual"
+mode = "Automated"
 reversing = False #Variable keeping track if mower is reversing when manual
 turning = False #Variable keeping track if mower is turning when manual
 
@@ -137,7 +137,8 @@ while running:
                     threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
                     # direction = 0
                     threadPos.start()
-                    #serUSB.write(b'A')
+                    serUSB.write(b'A')
+                    print(line)
 
                 elif line == 'O':
                     #Obstacle encountered
@@ -149,89 +150,92 @@ while running:
                     picNmbr += 1
                     print('Picture captured')
                     # Send picture to backend
-                    #serUSB.write(b'A')
+                    serUSB.write(b'A')
+                    print(line)
 
                 elif line == 'B':
                     #Out of bounds
                     pos.terminate()
                     threadPos.join()
-                    #serUSB.write(b'A')  
+                    serUSB.write(b'A')
+                    print(line)  
                 
                 elif line[0] == 'T':
                     #Turn
                     #direction += int(line[1:-1])
                     direction = int(line[1:-1])
-                    #serUSB.write(b'A')       
+                    serUSB.write(b'A')  
+                    print(line)     
             
             #Check if there is a message waiting from bluetooth
-            if bt.receivedMessage:
-                if bt.message == "9":
-                    # Change mode
-                    pos.terminate()
-                    threadPos.join()
-                    serUSB.write(b'M')
-                    mode = "Manual" 
-                bt.receivedMessage = False
+            # if bt.receivedMessage:
+            #     if bt.message == "9":
+            #         # Change mode
+            #         pos.terminate()
+            #         threadPos.join()
+            #         serUSB.write(b'M')
+            #         mode = "Manual" 
+            #     bt.receivedMessage = False
 
-        elif mode == "Manual":
-            #Check if there is a message waiting from bluetooth
-            if bt.receivedMessage:                
-                if bt.message == "0":
-                    # stop
-                    serUSB.write(b'0')
-                    pos.terminate()
-                    threadPos.join()
-                    #If the mower were reversing in previous state
-                    if reversing:
-                        pos.direction += 180
-                        reversing = False
-                    #If mower were turning in previous state
-                    elif turning:
-                        while True:
-                            if serUSB.in_waiting > 0:
-                                line = serUSB.readline().decode('utf-8').rstrip()
-                                # direction += float(line)
-                                direction = float(line)
-                                serUSB.write(b'A') 
-                                turning = False
-                                break          
+        # elif mode == "Manual":
+        #     #Check if there is a message waiting from bluetooth
+        #     if bt.receivedMessage:                
+        #         if bt.message == "0":
+        #             # stop
+        #             serUSB.write(b'0')
+        #             pos.terminate()
+        #             threadPos.join()
+        #             #If the mower were reversing in previous state
+        #             if reversing:
+        #                 pos.direction += 180
+        #                 reversing = False
+        #             #If mower were turning in previous state
+        #             elif turning:
+        #                 while True:
+        #                     if serUSB.in_waiting > 0:
+        #                         line = serUSB.readline().decode('utf-8').rstrip()
+        #                         # direction += float(line)
+        #                         direction = float(line)
+        #                         serUSB.write(b'A') 
+        #                         turning = False
+        #                         break          
                 
-                elif bt.message == "1":    
-                    # forward
-                    serUSB.write(b'1')
-                    threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
-                    threadPos.start()
-                    # direction = 0               
+        #         elif bt.message == "1":    
+        #             # forward
+        #             serUSB.write(b'1')
+        #             threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
+        #             threadPos.start()
+        #             # direction = 0               
                 
-                elif bt.message == "4":  
-                    # backward      
-                    pos.direction += 180
-                    reversing = True
-                    serUSB.write(b'2')
-                    threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
-                    threadPos.start()
-                    # direction = 0                   
+        #         elif bt.message == "4":  
+        #             # backward      
+        #             pos.direction += 180
+        #             reversing = True
+        #             serUSB.write(b'2')
+        #             threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
+        #             threadPos.start()
+        #             # direction = 0                   
                
-                elif bt.message == "2":    
-                    # turnLeft
-                    serUSB.write(b'3')
-                    turning = True
+        #         elif bt.message == "2":    
+        #             # turnLeft
+        #             serUSB.write(b'3')
+        #             turning = True
                 
-                elif bt.message == "3":
-                    # turnRight
-                    serUSB.write(b'4')
-                    turning = True
+        #         elif bt.message == "3":
+        #             # turnRight
+        #             serUSB.write(b'4')
+        #             turning = True
                 
-                elif bt.message == "8":    
-                    # changeMode
-                    serUSB.write(b'5')
-                    mode = "Automated"
+        #         elif bt.message == "8":    
+        #             # changeMode
+        #             serUSB.write(b'5')
+        #             mode = "Automated"
                 
-                bt.receivedMessage = False  
+        #         bt.receivedMessage = False  
     
     except KeyboardInterrupt:
-            if app_sock is not None:
-                app_sock.close()
-            server_sock.close()
+            # if app_sock is not None:
+            #     app_sock.close()
+            # server_sock.close()
             print("Server going down")
             running = False   
