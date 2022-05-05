@@ -120,7 +120,7 @@ serUSB.reset_input_buffer()
 #Variables used in statemachines
 running = True #Variable keeping track of program running
 global mode
-mode = "Automated"
+mode = "Manual"
 reversing = False #Variable keeping track if mower is reversing when manual
 turning = False #Variable keeping track if mower is turning when manual
 
@@ -162,7 +162,8 @@ while running:
             
             #Check if there is a message waiting from bluetooth
             if bt.receivedMessage:
-                if bt.message == "MANUAL":
+                if bt.message == "9":
+                    # Change mode
                     pos.terminate()
                     threadPos.join()
                     serUSB.write(b'M')
@@ -172,7 +173,7 @@ while running:
         elif mode == "Manual":
             #Check if there is a message waiting from bluetooth
             if bt.receivedMessage:                
-                if bt.message == "STOP":
+                if bt.message == "0":
                     # stop
                     serUSB.write(b'0')
                     pos.terminate()
@@ -191,13 +192,15 @@ while running:
                                 serUSB.write(b'A') 
                                 turning = False
                                 break          
-                elif bt.message == "FORWARD":    
+                
+                elif bt.message == "1":    
                     # forward
                     serUSB.write(b'1')
                     threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
                     threadPos.start()
                     # direction = 0               
-                elif bt.message == "REVERSE":  
+                
+                elif bt.message == "4":  
                     # backward      
                     pos.direction += 180
                     reversing = True
@@ -205,15 +208,18 @@ while running:
                     threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
                     threadPos.start()
                     # direction = 0                   
-                elif bt.message == "LEFT":    
+               
+                elif bt.message == "2":    
                     # turnLeft
                     serUSB.write(b'3')
                     turning = True
-                elif bt.message == "RIGHT":
+                
+                elif bt.message == "3":
                     # turnRight
                     serUSB.write(b'4')
                     turning = True
-                elif bt.message == "AUTO":    
+                
+                elif bt.message == "8":    
                     # changeMode
                     serUSB.write(b'5')
                     mode = "Automated"

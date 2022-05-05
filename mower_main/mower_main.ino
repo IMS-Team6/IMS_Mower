@@ -38,7 +38,7 @@ MeGyro gyro_0(0, 0x69);
 int distanceToObstacle = 10;
 int autoState = 0;
 char bluetoothState;
-int mode = 2;
+int mode = 1;
 int turnFlag = 0;
 
 
@@ -256,6 +256,7 @@ void bluetoothDriving(char nextState){
     case MOWER_CHANGEMODE:
       //Stop the robot and change mode to auto
       mode = 0;
+      autoState = 0;
       break;
       
     default:
@@ -285,6 +286,7 @@ void _loop() {
 void loop() {
   switch(mode){
     case 0:
+      //Autonomous
       if(Serial.available() > 0){
         char data = Serial.read();
         if(data == 'M'){
@@ -296,10 +298,11 @@ void loop() {
       break;
 
     case 1:
-    if(Serial.available() > 0){
-      char bluetoothState = Serial.read();
-      bluetoothDriving(bluetoothState);
-    }
+      //Manual
+      if(Serial.available() > 0){
+        char bluetoothState = Serial.read();
+        bluetoothDriving(bluetoothState);
+      }
     break;
 
     case 2:
