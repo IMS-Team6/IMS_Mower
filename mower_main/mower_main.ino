@@ -200,25 +200,25 @@ void bluetoothDriving(int nextState){
 
 void updateState(int data) {
 
-    if (data == "1") {
+    if (data == "8") {
         autonomousDriving();
     }
-    else if (data == "2") {
+    else if (data == "9") {
         bluetoothDriving();
     }
-    else if (data == "3") {
+    else if (data == "1") {
         moveForward();
     }
     else if (data == "4") {
         moveBackward();
     }
-    else if (data == "5") {
+    else if (data == "2") {
         turnLeft();
     }
-    else if (data == "6") {
+    else if (data == "3") {
         turnRight();
     }
-    else if (data == "7") {
+    else if (data == "0") {
         stopMotors();
     }
     else {
