@@ -175,7 +175,7 @@ int autonomousDriving(int currentState){
       //StartMotors
       moveForward();
       Serial.println('S');
-      //receiveAck();
+      receiveAck();
       nextState = 1;
       break;
 
@@ -188,7 +188,7 @@ int autonomousDriving(int currentState){
       //Found obstacle, handle it
       move(STOP, 0);
       Serial.println('O');
-      //receiveAck();
+      receiveAck();
       nextState = 4;
       break;
 
@@ -196,7 +196,7 @@ int autonomousDriving(int currentState){
       //Out of bounds, handle it
       move(STOP, 0);
       Serial.println('B');
-      //receiveAck();
+      receiveAck();
       nextState = 4;
       break;
 
@@ -205,7 +205,7 @@ int autonomousDriving(int currentState){
       autoRandomTurn();
       Serial.println("T" + getOrientation()); //Add the rounded value of new direction
       _delay(5);
-      //receiveAck();
+      receiveAck();
       nextState = 0;
       break;
 

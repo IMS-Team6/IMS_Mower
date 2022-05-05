@@ -13,14 +13,17 @@ class CalculatePosition:
         self.x = 0
         self.y = 0
         self.direction = 0
-        self.messagesPerSecond = 1.0
+        self.messagesPerSecond = 100.0
     
     def terminate(self):
+        print("(%s, %s)" % (int(self.x), int(self.y)))
+        #Send data to backend here instead of printing
         self._running = False
 
     #speed is about 8/34 m/s => 0.235m/s
     def run(self, speed, newDirection):
         self._running = True
+        sendMessage = 0
         # self.direction += newDirection
         self.direction = newDirection
         if self.direction > 360:
@@ -29,10 +32,12 @@ class CalculatePosition:
             self.x += speed/self.messagesPerSecond * math.cos((math.pi/2.0) - math.radians(self.direction))
             self.y += speed/self.messagesPerSecond * math.sin((math.pi/2.0) - math.radians(self.direction))
             #Round values to whatever backend wants.
-            print(int(self.x))
-            print(int(self.y))
-            #Send data to backend here instead of printing.
             sleep(1/self.messagesPerSecond)
+            sendMessage += 1
+            if sendMessage == self.messagesPerSecond:
+                print("(%s, %s)" % (int(self.x), int(self.y)))
+                #Send data to backend here instead of printing
+
 
 # class ReceiveBluetooth:
 #     def __init__(self):
@@ -108,12 +113,11 @@ sessionID = datetime.datetime.now().strftime("%y%m%d%H%M%S")
 
 #Init Camera
 camera = PiCamera()
-picNmbr = 0
 
 #Init Positioning
 pos = CalculatePosition()
 direction = 0
-speed = 20
+speed = 2
 # Send the first position to backend here (Session started at 0,0)
 
 #Init connection to Mower
@@ -138,7 +142,6 @@ while running:
                     # direction = 0
                     threadPos.start()
                     serUSB.write(b'A')
-                    print(line)
 
                 elif line == 'O':
                     #Obstacle encountered
@@ -146,26 +149,23 @@ while running:
                     threadPos.join()
                     camera.start_preview()
                     sleep(2)
-                    camera.capture('/home/pi/Desktop/images/image%s.jpg' % picNmbr)
-                    picNmbr += 1
+                    camera.capture('/home/pi/Desktop/images/image.jpg')
                     print('Picture captured')
                     # Send picture to backend
                     serUSB.write(b'A')
-                    print(line)
 
                 elif line == 'B':
                     #Out of bounds
                     pos.terminate()
                     threadPos.join()
                     serUSB.write(b'A')
-                    print(line)  
                 
                 elif line[0] == 'T':
                     #Turn
                     #direction += int(line[1:-1])
-                    direction = int(line[1:-1])
-                    serUSB.write(b'A')  
-                    print(line)     
+                    direction = int(line[1:])
+                    serUSB.write(b'A') 
+                    print("ANGLE: %s" % direction)    
             
             #Check if there is a message waiting from bluetooth
             # if bt.receivedMessage:
@@ -238,4 +238,5 @@ while running:
             #     app_sock.close()
             # server_sock.close()
             print("Server going down")
+            pos.terminate
             running = False   
