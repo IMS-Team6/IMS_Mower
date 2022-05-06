@@ -183,7 +183,7 @@ while running:
 
         elif mode == "Manual":
             #Check if there is a message waiting from bluetooth
-            message = app_sock.recv(1024)   
+            message = app_sock.recv(1024).decode('utf-8')   
             print(message)             
                 # if bt.message == "0":
                 #     # stop
