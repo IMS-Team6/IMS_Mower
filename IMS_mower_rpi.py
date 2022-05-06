@@ -40,7 +40,8 @@ class CalculatePosition:
 
 
 class ReceiveBluetooth:
-    def __init__(self):
+    def __init__(self, client):
+        self.client = client
         self.running = True
         self.receivedMessage = False
         self.message = "init"
@@ -48,9 +49,9 @@ class ReceiveBluetooth:
     def terminate(self):
         self.running = False
     
-    def run(self, client):
+    def run(self):
         while self.running:
-            self.message = client.recv(1024)
+            self.message = self.client.recv(1024).decode('utf-8')
             print(self.message)
             if len(self.message) == 0:
                 # Lost connection
@@ -104,12 +105,16 @@ def bluetoothInit():
 
 
 #Main function starts here
+
+#Init connection to Mower
+serUSB = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
+serUSB.reset_input_buffer()
+
 #Init bluetoothconnection
 app_sock = bluetoothInit()
-bt = ReceiveBluetooth()
-threadBT = Thread(target=bt.run, args=(app_sock,), daemon=1)
-#Create sessionID
-sessionID = datetime.datetime.now().strftime("%y%m%d%H%M%S")
+bt = ReceiveBluetooth(app_sock)
+threadBT = Thread(target=bt.run, daemon=1)
+
 #Init Camera
 camera = PiCamera()
 
@@ -117,11 +122,10 @@ camera = PiCamera()
 pos = CalculatePosition()
 direction = 0
 speed = 2
-# Send the first position to backend here (Session started at 0,0)
 
-#Init connection to Mower
-serUSB = serial.Serial('/dev/ttyUSB0', 115200, timeout=1)
-serUSB.reset_input_buffer()
+#Create sessionID
+sessionID = datetime.datetime.now().strftime("%y%m%d%H%M%S")
+# Send the first position to backend here (Session started at 0,0)
 
 #Variables used in statemachines
 running = True #Variable keeping track of program running
@@ -150,7 +154,8 @@ while running:
                     sleep(2)
                     camera.capture('/home/pi/Desktop/images/image.jpg')
                     print('Picture captured')
-                    # Send picture to backend
+                    # Send picture to backend here
+                    # Also send position + obstacle occured?
                     serUSB.write(b'A')
 
                 elif line == 'B':
