@@ -12,12 +12,12 @@ typedef enum Direction{
 } Direction;
 
 typedef enum {
-    MOWER_IDLE = 0,
-    MOWER_MAN_FORWARD,
-    MOWER_MAN_BACKWARDS,
-    MOWER_MAN_LEFT,
-    MOWER_MAN_RIGHT,
-    MOWER_CHANGEMODE
+    MOWER_IDLE = '0',
+    MOWER_MAN_FORWARD = '1',
+    MOWER_MAN_BACKWARDS = '2',
+    MOWER_MAN_LEFT = '3',
+    MOWER_MAN_RIGHT = '4',
+    MOWER_CHANGEMODE = '5'
 } mowerState_t;
 
 // functions for moving the robot
@@ -36,10 +36,22 @@ MeGyro gyro_0(0, 0x69);
 MeRGBLed rgbLED(0, 12);
 
 int distanceToObstacle = 10;
-Direction autoTurnDirection = STOP;
-int state = 0;
 int autoState = 0;
+char bluetoothState;
 int mode = 0;
+int turnFlag = 0;
+Direction autoTurnDirection = STOP;
+
+void _delay(float milliSeconds) {
+  if(milliSeconds < 0.0){
+    milliSeconds = 0.0;
+  }
+  long endTime = millis() + milliSeconds;
+  while(millis() < endTime){
+    _loop();
+    gyro_0.update();
+  }
+}
 
 void move(Direction direction, int speed)
 {
@@ -65,14 +77,6 @@ void move(Direction direction, int speed)
   motorRight.setTarPWM(rightSpeed);
 }
 
-void _delay(float milliSeconds) {
-  if(milliSeconds < 0.0){
-    milliSeconds = 0.0;
-  }
-  long endTime = millis() + milliSeconds;
-  while(millis() < endTime) _loop();
-}
-
 void moveForward() {
   move(FORWARD, 40 / 100.0 * 255);
 }
@@ -91,6 +95,24 @@ void turnRight() {
 
 void stopMotors() {
   move(STOP, 0);
+}
+
+void autoTurn() {
+  float turnDuration = random(800, 1800);
+
+  if (autoTurnDirection == LEFT) {
+    _delay(500);
+    turnLeft();
+    _delay(turnDuration);
+    stopMotors();
+    autoTurnDirection = STOP;
+  }else if(autoTurnDirection == RIGHT){
+    _delay(500);
+    turnRight();
+    _delay(turnDuration);
+    stopMotors();
+    autoTurnDirection = STOP;
+  }
 }
 
 void isr_process_motorLeft(void){
@@ -123,101 +145,130 @@ int checkSensors(){
   }
 }
 
-void autoTurn() {
-  float turnDuration = random(800, 1800);
+String getOrientation(){
+  gyro_0.update();
+  int angle = (int) gyro_0.getAngleZ();
+  if(angle < 0){
+    angle += 360;
+  }
+  return String(angle);
+}
 
-  if (autoTurnDirection == LEFT) {
-    delay(500);
-    turnLeft();
-    delay(turnDuration);
-    stopMotors();
-    autoTurnDirection = STOP;
-  }else if(autoTurnDirection == RIGHT){
-    delay(500);
-    turnRight();
-    delay(turnDuration);
-    stopMotors();
-    autoTurnDirection = STOP;
+void receiveAck(){
+  while(1){
+    if(Serial.available() > 0){
+      char data = Serial.read();
+      if(data == 'A'){
+        break;
+      }
+    }
   }
 }
 
 int autonomousDriving(int currentState){
-  int nextState = 0;
-
   rgbLED.setColor(0,0,0,100);
   rgbLED.show();
-  
-  switch(autoState){
+
+  int nextState = 0;
+  switch(currentState){
     case 0:
-    //StartMotors
-    moveForward();
-    autoState = 1;
-    break;
+      //StartMotors
+      moveForward();
+      Serial.println('S');
+      receiveAck();
+      nextState = 1;
+      break;
 
     case 1:
-    //Check sensors while driving forward
-    autoState = checkSensors(); 
-    break;
+      //Check sensors while driving forward
+      nextState = checkSensors(); 
+      break;
 
     case 2:
-    //Found obstacle, handle it
-    stopMotors();
-    autoState = 4;
-    break;
+      //Found obstacle, handle it
+      move(STOP, 0);
+      Serial.println('O');
+      receiveAck();
+      nextState = 4;
+      break;
 
     case 3:
-    //Out of bounds, handle it
-    stopMotors();
-    autoState = 4;
-    break;
+      //Out of bounds, handle it
+      move(STOP, 0);
+      Serial.println('B');
+      receiveAck();
+      nextState = 4;
+      break;
 
     case 4:
-    //Turn, handle orientation
-    autoTurn();
-    autoState = 0;
-    break;
+      //Turn, handle orientation
+      autoTurn();
+      Serial.println("T" + getOrientation()); //Add the rounded value of new direction
+      _delay(5000);
+      receiveAck();
+      nextState = 0;
+      break;
 
     case 5:
-    //Stop the robot and change mode to bt
-    break;        
+      //Stop the robot and change mode to manual
+      move(STOP, 0);
+      Serial.println('B');
+      receiveAck();
+      mode = 1;   //Change to manual
+      //state = 0;  //Initial value for next mode
+      break;
   }
   return nextState;
 }
 
-void bluetoothDriving(int nextState){
+void bluetoothDriving(char nextState){
+  rgbLED.setColor(0,0,100,0);
+  rgbLED.show();
+  
   switch(nextState){
     case MOWER_IDLE:
-    //Stop
-    stopMotors();
-
+      //Stop
+      stopMotors();
+      if(turnFlag == 1){
+        //Read gyro and send data to rpi
+        Serial.println("T" + getOrientation());
+        //receiveAck();
+        turnFlag = 0;
+        
+      }
     break;
 
     case MOWER_MAN_FORWARD:
-    //Drive forward
-    moveForward();
-    break;
+      //Drive forward
+      moveForward();
+      break;
 
     case MOWER_MAN_BACKWARDS:
-    //Drive backward
-    moveBackward();
-    break;
+      //Drive backward
+      moveBackward();
+      break;
 
     case MOWER_MAN_LEFT:
-    //Turn left
-    turnLeft();
-    break;
+      //Turn left
+      turnLeft();
+      turnFlag = 1;
+      break;
 
     case MOWER_MAN_RIGHT:
-    //Turn right
-    turnRight();
-    break;
+      //Turn right
+      turnRight();
+      turnFlag = 1;
+      break;
     
     case MOWER_CHANGEMODE:
-    //Stop the robot and change mode to auto
+      //Stop the robot and change mode to auto
+      mode = 0;
+      autoState = 0;
       break;
       
     default:
-        break;
+      //Weird data
+      break;
   }
 }
 
@@ -233,7 +284,7 @@ void setup() {
   rgbLED.fillPixelsBak(0, 2, 1);
   Serial.begin(115200);
   randomSeed((unsigned long)(lightsensor_12.read() * 123456)); 
-  delay(3000);
+  _delay(3000);
 }
 
 void _loop() {
@@ -242,18 +293,30 @@ void _loop() {
 }
 
 void loop() {
+  gyro_0.update();
   switch(mode){
     case 0:
-    state = autonomousDriving(state);
-    break;
+      //Autonomous
+      if(Serial.available() > 0){
+        char data = Serial.read();
+        if(data == 'M'){
+          autoState = 5;
+        }
+      }else{
+        autoState = autonomousDriving(autoState);
+      }
+      break;
 
     case 1:
-    bluetoothDriving(state);
+      //Manual
+      if(Serial.available() > 0){
+        char bluetoothState = Serial.read();
+        bluetoothDriving(bluetoothState);
+      }
     break;
 
     case 2:
     //Standby
-    
     break;
 
     default:
