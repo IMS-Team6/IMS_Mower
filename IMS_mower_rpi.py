@@ -239,9 +239,9 @@ while running:
             bt.receivedMessage = False  
     
     except KeyboardInterrupt:
-        # if app_sock is not None:
-        #     app_sock.close()
-        # server_sock.close()
+        if app_sock is not None:
+            app_sock.close()
+        server_sock.close()
         print("Server going down")
         pos.terminate
         running = False   
