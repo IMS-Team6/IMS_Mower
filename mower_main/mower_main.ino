@@ -14,9 +14,9 @@ typedef enum {
 typedef enum {
     MOWER_IDLE = '0',
     MOWER_MAN_FORWARD = '1',
-    MOWER_MAN_BACKWARDS = '2',
-    MOWER_MAN_LEFT = '3',
-    MOWER_MAN_RIGHT = '4',
+    MOWER_MAN_LEFT = '2',
+    MOWER_MAN_RIGHT = '3',
+    MOWER_MAN_BACKWARDS = '4',
     MOWER_CHANGEMODE = '5'
 } mowerState_t;
 
@@ -38,7 +38,7 @@ MeGyro gyro_0(0, 0x69);
 int distanceToObstacle = 10;
 int autoState = 0;
 char bluetoothState;
-int mode = 0;
+int mode = 1;
 int turnFlag = 0;
 
 
@@ -229,7 +229,7 @@ void bluetoothDriving(char nextState){
       if(turnFlag == 1){
         //Read gyro and send data to rpi
         Serial.println("T" + getOrientation());
-        //receiveAck();
+          receiveAck();
         turnFlag = 0;
         
       }
