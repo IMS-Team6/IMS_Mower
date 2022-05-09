@@ -6,6 +6,28 @@ import math
 from threading import Thread
 import datetime
 import bluetooth
+import requests
+import json
+
+
+def sendPos(sessionID, posX, posY, image):
+    #path = path(_dir) 
+
+    url = "http://3.72.195.76/api/upload/" + sessionID
+    payload={
+    'posX': posX,
+    'posY': posY
+    }
+    files=[
+      ('collisionImg',('obstacle.png',open('path/obstacle.png','rb'),'image/png'))
+    ]
+    headers = {
+      'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload, files=files)
+
+    print(response.text)
 
 class CalculatePosition:
     def __init__(self):
@@ -18,6 +40,7 @@ class CalculatePosition:
     def terminate(self):
         print("(%s, %s)" % (int(self.x), int(self.y)))
         #Send data to backend here instead of printing
+        sendPos
         self._running = False
 
     #speed is about 8/34 m/s => 0.235m/s
