@@ -54,7 +54,6 @@ class ReceiveBluetooth:
         while self.running:
             if self.receivedMessage == False:
                 dataBuffer = self.client.recv(4)
-                print(dataBuffer)
                 if len(dataBuffer) == 0:
                     # Lost connection
                     global mode
@@ -176,7 +175,7 @@ while running:
             
             #Check if there is a message waiting from bluetooth
             if bt.receivedMessage:
-                if bt.message == "9":
+                if bt.command == 9:
                     # Change mode
                     pos.terminate()
                     threadPos.join()
@@ -190,58 +189,58 @@ while running:
             # print(int.from_bytes(message, "big"))
 
             if bt.receivedMessage == True:
-                print(bt.command) 
-                bt.receivedMessage = False        
-                # if bt.message == "0":
-                #     # stop
-                #     serUSB.write(b'0')
-                #     pos.terminate()
-                #     threadPos.join()
-                #     #If the mower were reversing in previous state
-                #     if reversing:
-                #         pos.direction += 180
-                #         reversing = False
-                #     #If mower were turning in previous state
-                #     elif turning:
-                #         while True:
-                #             if serUSB.in_waiting > 0:
-                #                 line = serUSB.readline().decode('utf-8').rstrip()
-                #                 # direction += float(line)
-                #                 direction = float(line)
-                #                 serUSB.write(b'A') 
-                #                 turning = False
-                #                 break          
+                print(bt.command)         
+                if bt.command == 0:
+                    # stop
+                    serUSB.write(b'0')
+                    pos.terminate()
+                    threadPos.join()
+                    #If the mower were reversing in previous state
+                    if reversing:
+                        pos.direction += 180
+                        reversing = False
+                    #If mower were turning in previous state
+                    elif turning:
+                        while True:
+                            if serUSB.in_waiting > 0:
+                                line = serUSB.readline().decode('utf-8').rstrip()
+                                # direction += float(line)
+                                direction = int(line)
+                                serUSB.write(b'A') 
+                                turning = False
+                                break          
                 
-                # elif bt.message == "1":    
-                #     # forward
-                #     serUSB.write(b'1')
-                #     threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
-                #     threadPos.start()
-                #     # direction = 0               
+                elif bt.command == 1:    
+                    # forward
+                    serUSB.write(b'1')
+                    threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
+                    threadPos.start()
+                    # direction = 0               
                 
-                # elif bt.message == "2":    
-                #     # turnLeft
-                #     serUSB.write(b'2')
-                #     turning = True
+                elif bt.command == 2:    
+                    # turnLeft
+                    serUSB.write(b'2')
+                    turning = True
                 
-                # elif bt.message == "3":
-                #     # turnRight
-                #     serUSB.write(b'3')
-                #     turning = True
+                elif bt.command == 3:
+                    # turnRight
+                    serUSB.write(b'3')
+                    turning = True
 
-                # elif bt.message == "4":  
-                #     # backward      
-                #     pos.direction += 180
-                #     reversing = True
-                #     serUSB.write(b'4')
-                #     threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
-                #     threadPos.start()
-                #     # direction = 0                       
+                elif bt.command == 4:  
+                    # backward      
+                    pos.direction += 180
+                    reversing = True
+                    serUSB.write(b'4')
+                    threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
+                    threadPos.start()
+                    # direction = 0                       
                 
-                # elif bt.message == "8":    
-                #     # changeMode
-                #     serUSB.write(b'5')
-                #     mode = "Automated"
+                elif bt.command == 8:    
+                    # changeMode
+                    serUSB.write(b'5')
+                    mode = "Automated"
+                bt.receivedMessage = False
                  
     
     except KeyboardInterrupt:
