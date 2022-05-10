@@ -86,11 +86,11 @@ void moveBackward() {
 }
 
 void turnLeft() {
-    move(LEFT, 20 / 100.0 * 255);
+    move(LEFT, 40 / 100.0 * 255);
 }
 
 void turnRight() {
-    move(RIGHT, 20 / 100.0 * 255);
+    move(RIGHT, 40 / 100.0 * 255);
 }
 
 void stopMotors() {

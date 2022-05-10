@@ -1,3 +1,4 @@
+from glob import glob
 from sqlite3 import DatabaseError
 import serial
 from picamera import PiCamera
@@ -7,6 +8,47 @@ import math
 from threading import Thread
 import datetime
 import bluetooth
+import requests
+import json
+
+def sendPositionRequest(x, y, sessionID, state, collisionFlag):
+    print(sessionID)
+    url = "http://3.72.195.76/api/session/" + sessionID
+
+    payload = json.dumps({
+    "robotState": state,
+    "positions": {
+        "posX": x,
+        "posY": y
+    },
+    "collision": collisionFlag
+    })
+    headers = {
+    'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+    print(response.text)
+
+
+def sendImageRequest(x,y):
+    path = '/home/pi/Desktop/images/image.jpg'
+    url = "http://3.72.195.76/api/session/" + sessionID
+
+    payload={
+    'posX': x,
+    'posY': y
+    }
+    files=[
+    ('collisionImg', ('image.jpg',open(path, 'rb'), 'image/jpg'))
+    ]
+    headers = {
+    'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload, files=files)
+    print(response.text)    
+
 
 class CalculatePosition:
     def __init__(self):
@@ -15,16 +57,20 @@ class CalculatePosition:
         self.y = 0
         self.direction = 0
         self.messagesPerSecond = 100.0
+        self.collision = False
     
     def terminate(self):
         print("(%s, %s)" % (int(self.x), int(self.y)))
         #Send data to backend here instead of printing
+        #sendPositionRequest(int(self.x), int(self.y), sessionID, "MOVING", self.collision)
+        self.collision = False
         self._running = False
 
     #speed is about 8/34 m/s => 0.235m/s
     def run(self, speed, newDirection):
         self._running = True
         sendMessage = 0
+        global sessionID
         # self.direction += newDirection
         self.direction = newDirection
         if self.direction > 360:
@@ -37,6 +83,7 @@ class CalculatePosition:
             sendMessage += 1
             if sendMessage == self.messagesPerSecond:
                 print("(%s, %s)" % (int(self.x), int(self.y)))
+                #sendPositionRequest(int(self.x), int(self.y), sessionID, "MOVING", False)
                 #Send data to backend here instead of printing
 
 
@@ -126,8 +173,10 @@ direction = 0
 speed = 20
 
 #Create sessionID
+global sessionID
 sessionID = datetime.datetime.now().strftime("%y%m%d%H%M%S")
 # Send the first position to backend here (Session started at 0,0)
+#sendPositionRequest(int(pos.x), int(pos.y), sessionID, "START", False)
 
 #Variables used in statemachines
 running = True #Variable keeping track of program running
@@ -139,6 +188,18 @@ turning = False #Variable keeping track if mower is turning when manual
 while running:
     try:
         if mode == "Automated":
+            #Check if there is a message waiting from bluetooth
+            if bt.receivedMessage:
+                if bt.command == 9:
+                    # Change mode
+                    if threadPos.is_alive:
+                        pos.terminate()
+                        threadPos.join()
+                    serUSB.write(b'M')
+                    mode = "Manual" 
+                bt.receivedMessage = False
+            
+            
             if serUSB.in_waiting > 0:
                 line = serUSB.readline().decode('utf-8').rstrip()
                 if line == 'S':
@@ -150,6 +211,7 @@ while running:
 
                 elif line == 'O':
                     #Obstacle encountered
+                    pos.collision = True
                     pos.terminate()
                     threadPos.join()
                     camera.start_preview()
@@ -172,16 +234,6 @@ while running:
                     direction = int(line[1:])
                     serUSB.write(b'A') 
                     print("ANGLE: %s" % direction)    
-            
-            #Check if there is a message waiting from bluetooth
-            if bt.receivedMessage:
-                if bt.command == 9:
-                    # Change mode
-                    pos.terminate()
-                    threadPos.join()
-                    serUSB.write(b'M')
-                    mode = "Manual" 
-                bt.receivedMessage = False
 
         elif mode == "Manual":
             #Check if there is a message waiting from bluetooth
@@ -197,7 +249,7 @@ while running:
                     threadPos.join()
                     #If the mower were reversing in previous state
                     if reversing:
-                        pos.direction += 180
+                        direction += 180
                         reversing = False
                     #If mower were turning in previous state
                     elif turning:
@@ -205,7 +257,7 @@ while running:
                             if serUSB.in_waiting > 0:
                                 line = serUSB.readline().decode('utf-8').rstrip()
                                 # direction += float(line)
-                                direction = int(line)
+                                direction = int(line[1:])
                                 serUSB.write(b'A') 
                                 turning = False
                                 break          
@@ -229,7 +281,7 @@ while running:
 
                 elif bt.command == 4:  
                     # backward      
-                    pos.direction += 180
+                    direction += 180
                     reversing = True
                     serUSB.write(b'4')
                     threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
@@ -248,5 +300,6 @@ while running:
             app_sock.close()
         server_sock.close()
         print("Server going down")
+        #sendPositionRequest(int(pos.x), int(pos.y), sessionID, "STOP", False)
         pos.terminate
         running = False   
