@@ -1,3 +1,4 @@
+from sqlite3 import DatabaseError
 import serial
 from picamera import PiCamera
 from time import sleep
@@ -44,35 +45,36 @@ class ReceiveBluetooth:
         self.client = client
         self.running = True
         self.receivedMessage = False
-        self.message = "init"
+        self.command = 0
     
     def terminate(self):
         self.running = False
     
     def run(self):
         while self.running:
-            self.message = self.client.recv(1024).decode('utf-8')
-            print(self.message)
-            if len(self.message) == 0:
-                # Lost connection
-                global mode
-                mode = "Automated"
-                print("Lost connection to application...")
-                self.terminate()
-            else:
-                self.receivedMessage = True
-                #For testing purposes
-                print(self.receivedMessage)
+            if self.receivedMessage == False:
+                dataBuffer = self.client.recv(4)
+                print(dataBuffer)
+                if len(dataBuffer) == 0:
+                    # Lost connection
+                    global mode
+                    mode = "Automated"
+                    print("Lost connection to application...")
+                    self.terminate()
+                else:
+                    self.command = int.from_bytes(dataBuffer, "big")
+                    self.receivedMessage = True
 
 # Bluetooth init
 def bluetoothInit():
 
     # We need to wait until Bluetooth init is done
-    sleep(10)
+    sleep(5)
 
     # Make device visible
     t = Thread(target = os.system, args=('sudo hciconfig hci0 piscan', ), daemon = 1)
     t.start()
+    sleep(1)
 
     # Create a new server socket using RFCOMM protocol
     global server_sock
@@ -86,7 +88,7 @@ def bluetoothInit():
     port = server_sock.getsockname()[1]
 
     # The service UUID to advertise
-    uuid = "b2eac802-a015-49b4-8fd4-08212f5b2853"
+    uuid = "7be1fcb3-5776-42fb-91fd-2ee7b5bbb86d"
 
     # Start advertising the service
     bluetooth.advertise_service(server_sock, "IMSMowerGrp6",
@@ -114,6 +116,7 @@ serUSB.reset_input_buffer()
 app_sock = bluetoothInit()
 bt = ReceiveBluetooth(app_sock)
 threadBT = Thread(target=bt.run, daemon=1)
+threadBT.start()
 
 #Init Camera
 camera = PiCamera()
@@ -121,7 +124,7 @@ camera = PiCamera()
 #Init Positioning
 pos = CalculatePosition()
 direction = 0
-speed = 2
+speed = 20
 
 #Create sessionID
 sessionID = datetime.datetime.now().strftime("%y%m%d%H%M%S")
@@ -183,8 +186,12 @@ while running:
 
         elif mode == "Manual":
             #Check if there is a message waiting from bluetooth
-            message = app_sock.recv(1024).decode('utf-8')   
-            print(message)             
+            # message = app_sock.recv(1024)
+            # print(int.from_bytes(message, "big"))
+
+            if bt.receivedMessage == True:
+                print(bt.command) 
+                bt.receivedMessage = False        
                 # if bt.message == "0":
                 #     # stop
                 #     serUSB.write(b'0')
@@ -235,8 +242,7 @@ while running:
                 #     # changeMode
                 #     serUSB.write(b'5')
                 #     mode = "Automated"
-                
-            bt.receivedMessage = False  
+                 
     
     except KeyboardInterrupt:
         if app_sock is not None:
