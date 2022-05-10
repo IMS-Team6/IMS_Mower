@@ -3,13 +3,13 @@
 #include <SoftwareSerial.h>
 #include <MeAuriga.h>
 
-typedef enum {
+typedef enum Direction{
     FORWARD,
     BACKWARDS,
     LEFT,
     RIGHT,
     STOP
-} moveDirection;
+} Direction;
 
 typedef enum {
     MOWER_IDLE = '0',
@@ -27,33 +27,33 @@ void turnLeft();
 void turnRight();
 void stopMotors();
 
-
 MeLineFollower linefollower_9(9);
 MeUltrasonicSensor ultrasonic_10(10);
 MeEncoderOnBoard motorLeft(SLOT1);
 MeEncoderOnBoard motorRight(SLOT2);
 MeLightSensor lightsensor_12(12);
 MeGyro gyro_0(0, 0x69);
+MeRGBLed rgbLED(0, 12);
 
 int distanceToObstacle = 10;
 int autoState = 0;
 char bluetoothState;
 int mode = 0;
 int turnFlag = 0;
+Direction autoTurnDirection = STOP;
 
-
-void _delay(float seconds) {
-  if(seconds < 0.0){
-    seconds = 0.0;
+void _delay(float milliSeconds) {
+  if(milliSeconds < 0.0){
+    milliSeconds = 0.0;
   }
-  long endTime = millis() + seconds * 1000;
+  long endTime = millis() + milliSeconds;
   while(millis() < endTime){
     _loop();
     gyro_0.update();
   }
 }
 
-void move(moveDirection direction, int speed)
+void move(Direction direction, int speed)
 {
   int leftSpeed = 0;
   int rightSpeed = 0;
@@ -78,7 +78,7 @@ void move(moveDirection direction, int speed)
 }
 
 void moveForward() {
-    move(FORWARD, 40 / 100.0 * 255);
+  move(FORWARD, 40 / 100.0 * 255);
 }
 
 void moveBackward() {
@@ -97,40 +97,37 @@ void stopMotors() {
     move(STOP, 0);
 }
 
-void collision() {
-    moveBackward();
-    delay(500);
-    turnRight();
-    delay(500);
+void stopMotors() {
+  move(STOP, 0);
 }
 
-void autoRandomTurn() {
-  int turnLeft = random(1);
-  float timeToTurn = random(800, 1800);
+void autoTurn() {
+  float turnDuration = random(800, 1800);
 
-  if (turnLeft) {
-    //delay(500);
-    move(LEFT, 40 / 100.0 * 255);
-    _delay(timeToTurn / 1000);
-    move(STOP, 0);
-  }else if(!turnLeft){
-    //delay(500);
-    move(RIGHT, 40 / 100.0 * 255);
-    _delay(timeToTurn / 1000);
-    move(STOP, 0);
+  if (autoTurnDirection == LEFT) {
+    _delay(500);
+    turnLeft();
+    _delay(turnDuration);
+    stopMotors();
+    autoTurnDirection = STOP;
+  }else if(autoTurnDirection == RIGHT){
+    _delay(500);
+    turnRight();
+    _delay(turnDuration);
+    stopMotors();
+    autoTurnDirection = STOP;
   }
 }
 
-void isr_process_motorLeft(void)
-{
+void isr_process_motorLeft(void){
   if(digitalRead(motorLeft.getPortB()) == 0){
     motorLeft.pulsePosMinus();
   }else{
     motorLeft.pulsePosPlus();
   }
 }
-void isr_process_motorRight(void)
-{
+
+void isr_process_motorRight(void){
   if(digitalRead(motorRight.getPortB()) == 0){
     motorRight.pulsePosMinus();
   }else{
@@ -141,7 +138,11 @@ void isr_process_motorRight(void)
 int checkSensors(){
   if(ultrasonic_10.distanceCm() <= distanceToObstacle){
     return 2;
-  }else if(linefollower_9.readSensors()!=3){
+  }else if(linefollower_9.readSensors() == 1){
+    autoTurnDirection = RIGHT;
+  }else if(linefollower_9.readSensors() == 2){
+    autoTurnDirection = LEFT;
+  }else if(linefollower_9.readSensors() == 0){
     return 3;
   }else{
     return 1;
@@ -169,6 +170,9 @@ void receiveAck(){
 }
 
 int autonomousDriving(int currentState){
+  rgbLED.setColor(0,0,0,100);
+  rgbLED.show();
+
   int nextState = 0;
   switch(currentState){
     case 0:
@@ -202,9 +206,9 @@ int autonomousDriving(int currentState){
 
     case 4:
       //Turn, handle orientation
-      autoRandomTurn();
+      autoTurn();
       Serial.println("T" + getOrientation()); //Add the rounded value of new direction
-      _delay(5);
+      _delay(5000);
       receiveAck();
       nextState = 0;
       break;
@@ -222,6 +226,9 @@ int autonomousDriving(int currentState){
 }
 
 void bluetoothDriving(char nextState){
+  rgbLED.setColor(0,0,100,0);
+  rgbLED.show();
+  
   switch(nextState){
     case MOWER_IDLE:
       //Stop
@@ -277,9 +284,11 @@ void setup() {
   attachInterrupt(motorLeft.getIntNum(), isr_process_motorLeft, RISING);
   attachInterrupt(motorRight.getIntNum(), isr_process_motorRight, RISING);
   gyro_0.begin();
+  rgbLED.setpin(44);
+  rgbLED.fillPixelsBak(0, 2, 1);
   Serial.begin(115200);
   randomSeed((unsigned long)(lightsensor_12.read() * 123456)); 
-  _delay(3);
+  _delay(3000);
 }
 
 void _loop() {
