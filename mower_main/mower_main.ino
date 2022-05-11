@@ -38,7 +38,7 @@ MeGyro gyro_0(0, 0x69);
 int distanceToObstacle = 10;
 int autoState = 0;
 char bluetoothState;
-int mode = 1;
+int mode = 0;
 int turnFlag = 0;
 
 
@@ -204,7 +204,7 @@ int autonomousDriving(int currentState){
       //Turn, handle orientation
       autoRandomTurn();
       Serial.println("T" + getOrientation()); //Add the rounded value of new direction
-      _delay(5);
+      //_delay(0.5);
       receiveAck();
       nextState = 0;
       break;
@@ -212,7 +212,7 @@ int autonomousDriving(int currentState){
     case 5:
       //Stop the robot and change mode to manual
       move(STOP, 0);
-      Serial.println('B');
+      Serial.println('M');
       receiveAck();
       mode = 1;   //Change to manual
       //state = 0;  //Initial value for next mode
@@ -295,7 +295,8 @@ void loop() {
       if(Serial.available() > 0){
         char data = Serial.read();
         if(data == 'M'){
-          autoState = 5;
+          //autoState = 5;
+          autonomousDriving(5);
         }
       }else{
         autoState = autonomousDriving(autoState);

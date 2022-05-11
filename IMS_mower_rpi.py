@@ -171,6 +171,7 @@ camera = PiCamera()
 pos = CalculatePosition()
 direction = 0
 speed = 20
+threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
 
 #Create sessionID
 global sessionID
@@ -192,16 +193,16 @@ while running:
             if bt.receivedMessage:
                 if bt.command == 9:
                     # Change mode
-                    if threadPos.is_alive:
+                    if threadPos.is_alive():
                         pos.terminate()
                         threadPos.join()
                     serUSB.write(b'M')
-                    mode = "Manual" 
                 bt.receivedMessage = False
             
             
             if serUSB.in_waiting > 0:
                 line = serUSB.readline().decode('utf-8').rstrip()
+                print(line)
                 if line == 'S':
                     #Start motors
                     threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
@@ -228,25 +229,30 @@ while running:
                     threadPos.join()
                     serUSB.write(b'A')
                 
+                elif line == 'M':
+                    if threadPos.is_alive():
+                        pos.terminate()
+                        threadPos.join()
+                    serUSB.write(b'A')
+                    mode = "Manual"
+                
                 elif line[0] == 'T':
                     #Turn
                     #direction += int(line[1:-1])
                     direction = int(line[1:])
                     serUSB.write(b'A') 
-                    print("ANGLE: %s" % direction)    
+                    print("ANGLE: %s" % direction)
 
         elif mode == "Manual":
-            #Check if there is a message waiting from bluetooth
-            # message = app_sock.recv(1024)
-            # print(int.from_bytes(message, "big"))
-
+            # Check if message is waiting from bt
             if bt.receivedMessage == True:
                 print(bt.command)         
                 if bt.command == 0:
                     # stop
                     serUSB.write(b'0')
-                    pos.terminate()
-                    threadPos.join()
+                    if threadPos.is_alive():    
+                        pos.terminate()
+                        threadPos.join()
                     #If the mower were reversing in previous state
                     if reversing:
                         direction += 180
