@@ -82,19 +82,15 @@ void moveForward() {
 }
 
 void moveBackward() {
-    move(BACKWARDS, 40 / 100.0 * 255);
+  move(BACKWARDS, 40 / 100.0 * 255);
 }
 
 void turnLeft() {
-    move(LEFT, 40 / 100.0 * 255);
+  move(LEFT, 40 / 100.0 * 255);
 }
 
 void turnRight() {
-    move(RIGHT, 40 / 100.0 * 255);
-}
-
-void stopMotors() {
-    move(STOP, 0);
+  move(RIGHT, 40 / 100.0 * 255);
 }
 
 void collision() {
@@ -108,17 +104,16 @@ void autoRandomTurn() {
   int turnLeft = random(1);
   float timeToTurn = random(800, 1800);
 
-  if (turnLeft) {
-    //delay(500);
-    move(LEFT, 40 / 100.0 * 255);
-    _delay(timeToTurn / 1000);
-    move(STOP, 0);
-  }else if(!turnLeft){
-    //delay(500);
-    move(RIGHT, 40 / 100.0 * 255);
-    _delay(timeToTurn / 1000);
-    move(STOP, 0);
+  if (autoTurnDirection == LEFT) {
+    turnLeft();
+    _delay(turnDuration);
+    stopMotors();
+  }else if(autoTurnDirection == RIGHT){
+    turnRight();
+    _delay(turnDuration);
+    stopMotors();
   }
+  autoTurnDirection = STOP;
 }
 
 void isr_process_motorLeft(void)
@@ -141,7 +136,11 @@ void isr_process_motorRight(void)
 int checkSensors(){
   if(ultrasonic_10.distanceCm() <= distanceToObstacle){
     return 2;
-  }else if(linefollower_9.readSensors()!=3){
+  }else if(linefollower_9.readSensors() == 1){
+    autoTurnDirection = RIGHT;
+    return 3;
+  }else if((linefollower_9.readSensors() == 2) || (linefollower_9.readSensors() == 0)){
+    autoTurnDirection = LEFT;
     return 3;
   }else{
     return 1;
@@ -204,7 +203,6 @@ int autonomousDriving(int currentState){
       //Turn, handle orientation
       autoRandomTurn();
       Serial.println("T" + getOrientation()); //Add the rounded value of new direction
-      //_delay(0.5);
       receiveAck();
       nextState = 0;
       break;
