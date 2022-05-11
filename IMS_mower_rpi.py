@@ -109,7 +109,7 @@ class ReceiveBluetooth:
                     self.terminate()
                 else:
                     self.command = int.from_bytes(dataBuffer, "big")
-                    print("BT: " + self.command)
+                    print("BT: %s" % self.command)
                     self.receivedMessage = True
 
 # Bluetooth init
@@ -151,8 +151,6 @@ def bluetoothInit():
     print("Accepted connection from ", client_info)
     return client_sock
 
-
-
 #Main function starts here
 
 #Init connection to Mower
@@ -172,6 +170,8 @@ camera = PiCamera()
 pos = CalculatePosition()
 direction = 0
 speed = 20
+threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
+
 
 #Create sessionID
 global sessionID
@@ -188,22 +188,8 @@ turning = False #Variable keeping track if mower is turning when manual
 
 while running:
     try:
-        if mode == "Automated":
-            #Check if there is a message waiting from bluetooth
-            if bt.receivedMessage:
-                print(bt.command + "in automated....")
-                if bt.command == 9:
-                    # Change mode
-                    if threadPos.is_alive:
-                        pos.terminate()
-                        threadPos.join()
-                    serUSB.write(b'M')
-                    mode = "Manual" 
-                    print(mode)
-                bt.receivedMessage = False
-            
-            
-            elif serUSB.in_waiting > 0:
+        if mode == "Automated":  
+            if serUSB.in_waiting > 0:
                 line = serUSB.readline().decode('utf-8').rstrip()
                 print(line)
                 if line == 'S':
@@ -232,11 +218,28 @@ while running:
                     threadPos.join()
                     serUSB.write(b'A')
                 
-                elif line[0] == 'T':
+                elif line == 'T':
                     #Turn
+                    serUSB.write(b'A')
+                    while True:
+                        if serUSB.in_waiting > 0:
+                            angle = serUSB.readline().decode('utf-8').rstrip()
+                            print(angle)
+                            break
                     #direction += int(line[1:-1])
-                    direction = int(line[1:])
-                    serUSB.write(b'A')    
+                    direction = int(angle)
+                    serUSB.write(b'A')
+            #Check if there is a message waiting from bluetooth
+            if bt.receivedMessage:
+                print("%s in automated...." % bt.command)
+                if bt.command == 9:
+                    # Change mode
+                    if threadPos.is_alive:
+                        pos.terminate()
+                        threadPos.join()
+                    serUSB.write(b'M')
+                    mode = "Manual" 
+                bt.receivedMessage = False
 
         elif mode == "Manual":
             #Check if there is a message waiting from bluetooth
@@ -248,8 +251,9 @@ while running:
                 if bt.command == 0:
                     # stop
                     serUSB.write(b'0')
-                    pos.terminate()
-                    threadPos.join()
+                    if threadPos.is_alive:
+                        pos.terminate()
+                        threadPos.join()
                     #If the mower were reversing in previous state
                     if reversing:
                         direction += 180
@@ -260,7 +264,7 @@ while running:
                             if serUSB.in_waiting > 0:
                                 line = serUSB.readline().decode('utf-8').rstrip()
                                 # direction += float(line)
-                                direction = int(line[1:])
+                                direction = int(line)
                                 serUSB.write(b'A') 
                                 turning = False
                                 break          
