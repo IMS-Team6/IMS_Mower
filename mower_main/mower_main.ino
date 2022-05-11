@@ -82,19 +82,15 @@ void moveForward() {
 }
 
 void moveBackward() {
-    move(BACKWARDS, 40 / 100.0 * 255);
+  move(BACKWARDS, 40 / 100.0 * 255);
 }
 
 void turnLeft() {
-    move(LEFT, 20 / 100.0 * 255);
+  move(LEFT, 40 / 100.0 * 255);
 }
 
 void turnRight() {
-    move(RIGHT, 20 / 100.0 * 255);
-}
-
-void stopMotors() {
-    move(STOP, 0);
+  move(RIGHT, 40 / 100.0 * 255);
 }
 
 void stopMotors() {
@@ -105,18 +101,15 @@ void autoTurn() {
   float turnDuration = random(800, 1800);
 
   if (autoTurnDirection == LEFT) {
-    _delay(500);
     turnLeft();
     _delay(turnDuration);
     stopMotors();
-    autoTurnDirection = STOP;
   }else if(autoTurnDirection == RIGHT){
-    _delay(500);
     turnRight();
     _delay(turnDuration);
     stopMotors();
-    autoTurnDirection = STOP;
   }
+  autoTurnDirection = STOP;
 }
 
 void isr_process_motorLeft(void){
@@ -140,9 +133,9 @@ int checkSensors(){
     return 2;
   }else if(linefollower_9.readSensors() == 1){
     autoTurnDirection = RIGHT;
-  }else if(linefollower_9.readSensors() == 2){
+    return 3;
+  }else if((linefollower_9.readSensors() == 2) || (linefollower_9.readSensors() == 0)){
     autoTurnDirection = LEFT;
-  }else if(linefollower_9.readSensors() == 0){
     return 3;
   }else{
     return 1;
@@ -208,7 +201,6 @@ int autonomousDriving(int currentState){
       //Turn, handle orientation
       autoTurn();
       Serial.println("T" + getOrientation()); //Add the rounded value of new direction
-      _delay(5000);
       receiveAck();
       nextState = 0;
       break;
