@@ -103,12 +103,13 @@ class ReceiveBluetooth:
                 dataBuffer = self.client.recv(4)
                 if len(dataBuffer) == 0:
                     # Lost connection
-                    global mode
-                    mode = "Automated"
+                    # global mode
+                    # mode = "Automated"
                     print("Lost connection to application...")
                     self.terminate()
                 else:
                     self.command = int.from_bytes(dataBuffer, "big")
+                    print("BT: " + self.command)
                     self.receivedMessage = True
 
 # Bluetooth init
@@ -190,6 +191,7 @@ while running:
         if mode == "Automated":
             #Check if there is a message waiting from bluetooth
             if bt.receivedMessage:
+                print(bt.command + "in automated....")
                 if bt.command == 9:
                     # Change mode
                     if threadPos.is_alive:
@@ -197,11 +199,13 @@ while running:
                         threadPos.join()
                     serUSB.write(b'M')
                     mode = "Manual" 
+                    print(mode)
                 bt.receivedMessage = False
             
             
-            if serUSB.in_waiting > 0:
+            elif serUSB.in_waiting > 0:
                 line = serUSB.readline().decode('utf-8').rstrip()
+                print(line)
                 if line == 'S':
                     #Start motors
                     threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
@@ -232,8 +236,7 @@ while running:
                     #Turn
                     #direction += int(line[1:-1])
                     direction = int(line[1:])
-                    serUSB.write(b'A') 
-                    print("ANGLE: %s" % direction)    
+                    serUSB.write(b'A')    
 
         elif mode == "Manual":
             #Check if there is a message waiting from bluetooth

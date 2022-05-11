@@ -204,7 +204,7 @@ int autonomousDriving(int currentState){
       //Turn, handle orientation
       autoRandomTurn();
       Serial.println("T" + getOrientation()); //Add the rounded value of new direction
-      _delay(5);
+      //_delay(5);
       receiveAck();
       nextState = 0;
       break;
@@ -261,6 +261,7 @@ void bluetoothDriving(char nextState){
       //Stop the robot and change mode to auto
       mode = 0;
       autoState = 0;
+      _delay(1);
       break;
       
     default:
@@ -295,7 +296,9 @@ void loop() {
       if(Serial.available() > 0){
         char data = Serial.read();
         if(data == 'M'){
-          autoState = 5;
+          move(STOP, 0);
+          mode = 1;       
+          //autonomousDriving(5);
         }
       }else{
         autoState = autonomousDriving(autoState);
