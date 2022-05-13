@@ -109,7 +109,7 @@ class ReceiveBluetooth:
                     self.terminate()
                 else:
                     self.command = int.from_bytes(dataBuffer, "big")
-                    print("BT: %s" % self.command)
+                    #print("BT: %s" % self.command)
                     self.receivedMessage = True
 
 # Bluetooth init
@@ -224,7 +224,7 @@ while running:
                     while True:
                         if serUSB.in_waiting > 0:
                             angle = serUSB.readline().decode('utf-8').rstrip()
-                            print(angle)
+                            #print(angle)
                             break
                     #direction += int(line[1:-1])
                     direction = int(angle)
@@ -243,11 +243,9 @@ while running:
 
         elif mode == "Manual":
             #Check if there is a message waiting from bluetooth
-            # message = app_sock.recv(1024)
-            # print(int.from_bytes(message, "big"))
-
             if bt.receivedMessage == True:
-                print(bt.command)         
+                #print(bt.command)         
+                
                 if bt.command == 0:
                     # stop
                     serUSB.write(b'0')
