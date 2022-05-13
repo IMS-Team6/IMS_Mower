@@ -181,6 +181,14 @@ int autonomousDriving(int currentState) {
 
     case 1:
       //Check sensors while driving forward
+      if(Serial.available() > 0){
+        //_loop();
+        move(STOP, 0);
+        //_loop();
+        char data = Serial.read();
+        if(data == 'M');
+          mode = 1;
+          
       nextState = checkSensors();
       break;
 
@@ -297,7 +305,7 @@ void loop() {
   switch (mode) {
     case 0:
       //Autonomous
-      if(Serial.available() > 0){
+      /*if(Serial.available() > 0){
         //_loop();
         move(STOP, 0);
         //_loop();
@@ -307,7 +315,8 @@ void loop() {
           //autonomousDriving(5);
         }else{
       autoState = autonomousDriving(autoState);
-     }
+     }*/
+      autoState = autonomousDriving(autoState)
       break;
 
     case 1:

@@ -83,8 +83,8 @@ class CalculatePosition:
             sendMessage += 1
             if sendMessage == self.messagesPerSecond:
                 print("(%s, %s)" % (int(self.x), int(self.y)))
-                #sendPositionRequest(int(self.x), int(self.y), sessionID, "MOVING", False)
                 #Send data to backend here instead of printing
+                #sendPositionRequest(int(self.x), int(self.y), sessionID, "MOVING", False)
 
 
 class ReceiveBluetooth:
