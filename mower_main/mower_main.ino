@@ -161,8 +161,11 @@ void receiveAck() {
   while (1) {
     if (Serial.available() > 0) {
       char data = Serial.read();
-      if(data == 'A') {
+      if (data == 'A') {
         break;
+      /*}else if (data == 'M'){
+        mode = 1;
+        //Might need to do some other shit here aswell.....*/
       }
     }
   }
@@ -181,21 +184,22 @@ int autonomousDriving(int currentState) {
 
     case 1:
       //Check sensors while driving forward
-      if(Serial.available() > 0){
-        //_loop();
+      /*if (Serial.available() > 0) {
         move(STOP, 0);
-        //_loop();
         char data = Serial.read();
-        if(data == 'M');
+        if (data == 'M') {
           mode = 1;
-          
+          break;
+        }
+        }
+        moveForward();*/
       nextState = checkSensors();
       break;
 
     case 2:
       //Found obstacle, handle it
       stopMotors();
-      _delay(2);
+      _delay(2.5);
       Serial.println('O');
       receiveAck();
       nextState = 4;
@@ -204,7 +208,6 @@ int autonomousDriving(int currentState) {
     case 3:
       //Out of bounds, handle it
       stopMotors();
-      _delay(3);
       Serial.println('B');
       receiveAck();
       nextState = 4;
@@ -220,14 +223,14 @@ int autonomousDriving(int currentState) {
       nextState = 0;
       break;
 
-    /*case 5:
-      //Stop the robot and change mode to manual
-      move(STOP, 0);
-      //Serial.println('B');
-      receiveAck();
-      mode = 1;   //Change to manual
-      //state = 0;  //Initial value for next mode
-      break;*/
+      /*case 5:
+        //Stop the robot and change mode to manual
+        move(STOP, 0);
+        //Serial.println('B');
+        receiveAck();
+        mode = 1;   //Change to manual
+        //state = 0;  //Initial value for next mode
+        break;*/
   }
   return nextState;
 }
@@ -292,7 +295,7 @@ void setup() {
   Serial.begin(115200);
   randomSeed((unsigned long)(lightsensor_12.read() * 123456));
   _delay(1);
-  }
+}
 
 void _loop() {
   motorLeft.loop();
@@ -301,22 +304,23 @@ void _loop() {
 
 void loop() {
   gyro_0.update();
-  
+
   switch (mode) {
     case 0:
       //Autonomous
-      /*if(Serial.available() > 0){
+      if (Serial.available() > 0) {
         //_loop();
         move(STOP, 0);
         //_loop();
         char data = Serial.read();
-        if(data == 'M');
+        if (data == 'M') {
           mode = 1;
-          //autonomousDriving(5);
-        }else{
-      autoState = autonomousDriving(autoState);
-     }*/
-      autoState = autonomousDriving(autoState)
+        }
+        //autonomousDriving(5);
+      } else {
+        autoState = autonomousDriving(autoState);
+      }
+      //autoState = autonomousDriving(autoState)
       break;
 
     case 1:
@@ -330,6 +334,6 @@ void loop() {
     default:
       //Dont get here
       break;
-  } 
+  }
   _loop();
 }
