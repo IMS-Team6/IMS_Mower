@@ -84,7 +84,8 @@ class CalculatePosition:
             if sendMessage == self.messagesPerSecond:
                 print("(%s, %s)" % (int(self.x), int(self.y)))
                 #Send data to backend here instead of printing
-                #sendPositionRequest(int(self.x), int(self.y), sessionID, "MOVING", False)
+                #sendPositionRequest(int(self.x), int(self.y), sessionID, "MOVING", self.collision)
+                self.collision = False
 
 
 class ReceiveBluetooth:
@@ -209,7 +210,7 @@ while running:
                     camera.capture('/home/pi/Desktop/images/image.jpg')
                     print('Picture captured')
                     # Send picture to backend here
-                    # Also send position + obstacle occured?
+                    sendImageRequest(int(pos.x), int(pos.y))
                     #serUSB.write(b'A')
 
                 elif line == 'B':
