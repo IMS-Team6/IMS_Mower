@@ -235,7 +235,7 @@ while running:
                 print("%s in automated...." % bt.command)
                 if bt.command == 9:
                     # Change mode
-                    if threadPos.is_alive:
+                    if threadPos.is_alive():
                         pos.terminate()
                         threadPos.join()
                     serUSB.write(b'M')
@@ -249,7 +249,7 @@ while running:
                 if bt.command == 0:
                     # stop
                     serUSB.write(b'0')
-                    if threadPos.is_alive:
+                    if threadPos.is_alive():
                         pos.terminate()
                         threadPos.join()
                     #If the mower were reversing in previous state
@@ -309,5 +309,5 @@ while running:
         server_sock.close()
         print("Server going down")
         #sendPositionRequest(int(pos.x), int(pos.y), sessionID, "STOP", False)
-        pos.terminate
+        pos.terminate()
         running = False   
