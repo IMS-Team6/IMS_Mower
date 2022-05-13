@@ -200,7 +200,7 @@ int autonomousDriving(int currentState) {
     case 2:
       //Found obstacle, handle it
       stopMotors();
-      _delay(2.5);
+      _delay(3);
       Serial.println('O');
       //receiveAck();
       nextState = 4;
