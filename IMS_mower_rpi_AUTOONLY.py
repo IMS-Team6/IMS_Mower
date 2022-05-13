@@ -148,7 +148,7 @@ while running:
                     pos.terminate()
                     threadPos.join()
                     camera.start_preview()
-                    sleep(2)
+                    sleep(10)
                     camera.capture('/home/pi/Desktop/images/image.jpg')
                     print('Picture captured')
                     # Send picture to backend
