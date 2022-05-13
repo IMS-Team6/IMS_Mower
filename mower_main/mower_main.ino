@@ -35,7 +35,7 @@ MeEncoderOnBoard motorRight(SLOT2);
 MeLightSensor lightsensor_12(12);
 MeGyro gyro_0(0, 0x69);
 
-int distanceToObstacle = 15;
+int distanceToObstacle = 10;
 int autoState = 0;
 char bluetoothState;
 int mode = 1;
@@ -176,9 +176,9 @@ int autonomousDriving(int currentState) {
   switch (currentState) {
     case 0:
       //StartMotors
-      moveForward();
       Serial.println('S');
-      receiveAck();
+      moveForward();
+      //receiveAck();
       nextState = 1;
       break;
 
@@ -193,6 +193,7 @@ int autonomousDriving(int currentState) {
         }
         }
         moveForward();*/
+      moveForward();
       nextState = checkSensors();
       break;
 
@@ -201,7 +202,7 @@ int autonomousDriving(int currentState) {
       stopMotors();
       _delay(2.5);
       Serial.println('O');
-      receiveAck();
+      //receiveAck();
       nextState = 4;
       break;
 
@@ -209,17 +210,17 @@ int autonomousDriving(int currentState) {
       //Out of bounds, handle it
       stopMotors();
       Serial.println('B');
-      receiveAck();
+      //receiveAck();
       nextState = 4;
       break;
 
     case 4:
       //Turn, handle orientation
       Serial.println("T");
-      receiveAck();
+      //receiveAck();
       autoRandomTurn();
       Serial.println(getOrientation()); //Add the rounded value of new direction
-      receiveAck();
+      //receiveAck();
       nextState = 0;
       break;
 
@@ -243,7 +244,7 @@ void bluetoothDriving(char nextState) {
       if (turnFlag == 1) {
         //Read gyro and send data to rpi
         Serial.println(getOrientation());
-        receiveAck();
+        //receiveAck();
         turnFlag = 0;
 
       }
@@ -320,7 +321,7 @@ void loop() {
       } else {
         autoState = autonomousDriving(autoState);
       }
-      //autoState = autonomousDriving(autoState)
+      //autoState = autonomousDriving(autoState);
       break;
 
     case 1:

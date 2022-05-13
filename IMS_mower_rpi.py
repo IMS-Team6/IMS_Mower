@@ -197,7 +197,7 @@ while running:
                     threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
                     # direction = 0
                     threadPos.start()
-                    serUSB.write(b'A')
+                   # serUSB.write(b'A')
 
                 elif line == 'O':
                     #Obstacle encountered
@@ -210,17 +210,17 @@ while running:
                     print('Picture captured')
                     # Send picture to backend here
                     # Also send position + obstacle occured?
-                    serUSB.write(b'A')
+                    #serUSB.write(b'A')
 
                 elif line == 'B':
                     #Out of bounds
                     pos.terminate()
                     threadPos.join()
-                    serUSB.write(b'A')
+                    #serUSB.write(b'A')
                 
                 elif line == 'T':
                     #Turn
-                    serUSB.write(b'A')
+                    #serUSB.write(b'A')
                     while True:
                         if serUSB.in_waiting > 0:
                             angle = serUSB.readline().decode('utf-8').rstrip()
@@ -228,7 +228,8 @@ while running:
                             break
                     #direction += int(line[1:-1])
                     direction = int(angle)
-                    serUSB.write(b'A')
+                    #serUSB.write(b'A')
+
             #Check if there is a message waiting from bluetooth
             if bt.receivedMessage:
                 print("%s in automated...." % bt.command)
@@ -238,14 +239,13 @@ while running:
                         pos.terminate()
                         threadPos.join()
                     serUSB.write(b'M')
-                    mode = "Manual" 
+                    mode = "Manual"
                 bt.receivedMessage = False
 
         elif mode == "Manual":
             #Check if there is a message waiting from bluetooth
             if bt.receivedMessage == True:
                 #print(bt.command)         
-                
                 if bt.command == 0:
                     # stop
                     serUSB.write(b'0')
@@ -261,11 +261,14 @@ while running:
                         while True:
                             if serUSB.in_waiting > 0:
                                 line = serUSB.readline().decode('utf-8').rstrip()
-                                # direction += float(line)
-                                direction = int(line)
-                                serUSB.write(b'A') 
-                                turning = False
-                                break          
+                                if(line == 'O' or line == 'S' or line == 'B' or line == 'T'):
+                                    pass
+                                else:
+                                    # direction += float(line)
+                                    direction = int(line)
+                                    #serUSB.write(b'A') 
+                                    turning = False
+                                    break          
                 
                 elif bt.command == 1:    
                     # forward
