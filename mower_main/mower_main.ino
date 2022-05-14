@@ -27,26 +27,26 @@ void turnLeft();
 void turnRight();
 void stopMotors();
 
-
 MeLineFollower linefollower_9(9);
 MeUltrasonicSensor ultrasonic_10(10);
 MeEncoderOnBoard motorLeft(SLOT1);
 MeEncoderOnBoard motorRight(SLOT2);
 MeLightSensor lightsensor_12(12);
 MeGyro gyro_0(0, 0x69);
+MeRGBLed rgbLED(0, 12);
 
 int distanceToObstacle = 10;
 int autoState = 0;
 char bluetoothState;
 int mode = 1;
 int turnFlag = 0;
+moveDirection autoTurnDirection = STOP;
 
-
-void _delay(float seconds) {
-  if (seconds < 0.0) {
-    seconds = 0.0;
+void _delay(float milliSeconds) {
+  if (milliSeconds < 0.0) {
+    milliSeconds = 0.0;
   }
-  long endTime = millis() + seconds * 1000;
+  long endTime = millis() + milliSeconds;
   while (millis() < endTime) {
     _loop();
     gyro_0.update();
@@ -104,21 +104,19 @@ void collision() {
   delay(500);
 }
 
-void autoRandomTurn() {
-  int turnLeft = random(1);
+void autoTurn() {
   float timeToTurn = random(800, 1800);
 
-  if (turnLeft) {
-    //delay(500);
+  if (autoTurnDirection == LEFT) {
     move(LEFT, 40 / 100.0 * 255);
-    _delay(timeToTurn / 1000);
+    _delay(timeToTurn);
     move(STOP, 0);
-  } else if (!turnLeft) {
-    //delay(500);
+  } else if (autoTurnDirection == RIGHT) {
     move(RIGHT, 40 / 100.0 * 255);
-    _delay(timeToTurn / 1000);
+    _delay(timeToTurn);
     move(STOP, 0);
   }
+  autoTurnDirection = STOP;
 }
 
 void isr_process_motorLeft(void)
@@ -141,7 +139,11 @@ void isr_process_motorRight(void)
 int checkSensors() {
   if (ultrasonic_10.distanceCm() <= distanceToObstacle) {
     return 2;
-  } else if (linefollower_9.readSensors() != 3) {
+  } else if (linefollower_9.readSensors() == 1) {
+    autoTurnDirection = RIGHT;
+    return 3;
+  } else if ((linefollower_9.readSensors() == 2) || (linefollower_9.readSensors() == 0)) {
+    autoTurnDirection == LEFT;
     return 3;
   } else {
     return 1;
@@ -200,7 +202,7 @@ int autonomousDriving(int currentState) {
     case 2:
       //Found obstacle, handle it
       stopMotors();
-      _delay(2.5);
+      _delay(2500);
       Serial.println('O');
       //receiveAck();
       nextState = 4;
@@ -218,7 +220,7 @@ int autonomousDriving(int currentState) {
       //Turn, handle orientation
       Serial.println("T");
       //receiveAck();
-      autoRandomTurn();
+      autoTurn();
       Serial.println(getOrientation()); //Add the rounded value of new direction
       //receiveAck();
       nextState = 0;
@@ -293,9 +295,11 @@ void setup() {
   attachInterrupt(motorLeft.getIntNum(), isr_process_motorLeft, RISING);
   attachInterrupt(motorRight.getIntNum(), isr_process_motorRight, RISING);
   gyro_0.begin();
+  rgbLED.setpin(44);
+  rgbLED.fillPixelsBak(0, 2, 1);
   Serial.begin(115200);
   randomSeed((unsigned long)(lightsensor_12.read() * 123456));
-  _delay(1);
+  _delay(1000);
 }
 
 void _loop() {
@@ -319,6 +323,9 @@ void loop() {
         }
         //autonomousDriving(5);
       } else {
+        rgbLED.setColor(0,0,100,0);
+        rgbLED.show();
+        
         autoState = autonomousDriving(autoState);
       }
       //autoState = autonomousDriving(autoState);
@@ -327,6 +334,9 @@ void loop() {
     case 1:
       //Manual
       if (Serial.available() > 0) {
+        rgbLED.setColor(0,0,0,100);
+        rgbLED.show();
+        
         char bluetoothState = Serial.read();
         bluetoothDriving(bluetoothState);
       }
