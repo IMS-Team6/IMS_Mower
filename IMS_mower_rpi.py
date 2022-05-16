@@ -31,23 +31,40 @@ def sendPositionRequest(x, y, sessionID, state, collisionFlag):
     print(response.text)
 
 
+# def sendImageRequest(x,y):
+#     path = '/home/pi/Desktop/images/image.jpg'
+#     url = "http://3.72.195.76/api/session/" + sessionID
+
+#     payload={
+#     'posX': x,
+#     'posY': y
+#     }
+#     files=[
+#     ('collisionImg', ('image.jpg',open(path, 'rb'), 'image/jpg'))
+#     ]
+#     headers = {
+#     'Content-Type': 'application/json'
+#     }
+
+#     response = requests.request("POST", url, headers=headers, data=payload, files=files)
+    print(response.text)
+
 def sendImageRequest(x,y):
     path = '/home/pi/Desktop/images/image.jpg'
     url = "http://3.72.195.76/api/session/" + sessionID
 
-    payload={
+    payload = {
     'posX': x,
-    'posY': y
+    'posY': y}
+    files = {
+    ('collisionImg', ('image.jpg', open(path, 'rb'), 'image/jpg'))
     }
-    files=[
-    ('collisionImg', ('image.jpg',open(path, 'rb'), 'image/jpg'))
-    ]
-    headers = {
-    'Content-Type': 'application/json'
-    }
+    headers = {} # NO HEADER!! Only blank space.
 
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
-    print(response.text)    
+
+    #response.raise_for_status()
+    print(response.text)        
 
 
 class CalculatePosition:
