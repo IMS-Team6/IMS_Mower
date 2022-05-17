@@ -35,16 +35,15 @@ def sendImageRequest(x,y, sessionID):
     url = "http://3.72.195.76/api/upload/" + sessionID
 
     payload = {
-    'posX': x,
-    'posY': y}
+        'posX': x,
+        'posY': y
+    }
     files = [
-    ('collisionImg', ('image.jpg', open(path, 'rb'), 'image/jpg'))
+        ('collisionImg', ('image.jpg', open(path, 'rb'), 'image/jpg'))
     ]
-    headers = {} # NO HEADER!! Only blank space.
+    headers = {}
 
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
-
-    # response.raise_for_status()
     print(response.text)        
 
 
@@ -59,7 +58,6 @@ class CalculatePosition:
     
     def terminate(self):
         print("(%s, %s)" % (int(self.x), int(self.y)))
-        #Send data to backend here instead of printing
         sendPositionRequest(int(self.x), int(self.y), sessionID, "MOVING", self.collision)
         self.collision = False
         self._running = False
@@ -69,19 +67,16 @@ class CalculatePosition:
         self._running = True
         sendMessage = 0
         global sessionID
-        # self.direction += newDirection
         self.direction = newDirection
         if self.direction > 360:
             self.direction -= 360
         while self._running:
             self.x += speed/self.messagesPerSecond * math.cos((math.pi/2.0) - math.radians(self.direction))
             self.y += speed/self.messagesPerSecond * math.sin((math.pi/2.0) - math.radians(self.direction))
-            #Round values to whatever backend wants.
             sleep(1/self.messagesPerSecond)
             sendMessage += 1
             if sendMessage == self.messagesPerSecond:
                 print("(%s, %s)" % (int(self.x), int(self.y)))
-                #Send data to backend here instead of printing
                 sendPositionRequest(int(self.x), int(self.y), sessionID, "MOVING", self.collision)
                 self.collision = False
 
@@ -102,13 +97,10 @@ class ReceiveBluetooth:
                 dataBuffer = self.client.recv(4)
                 if len(dataBuffer) == 0:
                     # Lost connection
-                    # global mode
-                    # mode = "Automated"
                     print("Lost connection to application...")
                     self.terminate()
                 else:
                     self.command = int.from_bytes(dataBuffer, "big")
-                    #print("BT: %s" % self.command)
                     self.receivedMessage = True
 
 # Bluetooth init
@@ -168,7 +160,7 @@ camera = PiCamera()
 #Init Positioning
 pos = CalculatePosition()
 direction = 0
-speed = 20
+speed = 2
 threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
 
 
@@ -194,9 +186,7 @@ while running:
                 if line == 'S':
                     #Start motors
                     threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
-                    # direction = 0
                     threadPos.start()
-                   # serUSB.write(b'A')
 
                 elif line == 'O':
                     #Obstacle encountered
@@ -209,25 +199,19 @@ while running:
                     print('Picture captured')
                     # Send picture to backend here
                     sendImageRequest(int(pos.x), int(pos.y), sessionID)
-                    #serUSB.write(b'A')
 
                 elif line == 'B':
                     #Out of bounds
                     pos.terminate()
                     threadPos.join()
-                    #serUSB.write(b'A')
                 
                 elif line == 'T':
                     #Turn
-                    #serUSB.write(b'A')
                     while True:
                         if serUSB.in_waiting > 0:
                             angle = serUSB.readline().decode('utf-8').rstrip()
-                            #print(angle)
                             break
-                    #direction += int(line[1:-1])
                     direction = int(angle)
-                    #serUSB.write(b'A')
 
             #Check if there is a message waiting from bluetooth
             if bt.receivedMessage:
@@ -244,7 +228,6 @@ while running:
         elif mode == "Manual":
             #Check if there is a message waiting from bluetooth
             if bt.receivedMessage == True:
-                #print(bt.command)         
                 if bt.command == 0:
                     # stop
                     serUSB.write(b'0')
@@ -263,9 +246,7 @@ while running:
                                 if(line == 'O' or line == 'S' or line == 'B' or line == 'T'):
                                     pass
                                 else:
-                                    # direction += float(line)
                                     direction = int(line)
-                                    #serUSB.write(b'A') 
                                     turning = False
                                     break          
                 
@@ -274,7 +255,6 @@ while running:
                     serUSB.write(b'1')
                     threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
                     threadPos.start()
-                    # direction = 0               
                 
                 elif bt.command == 2:    
                     # turnLeft
@@ -293,7 +273,6 @@ while running:
                     serUSB.write(b'4')
                     threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
                     threadPos.start()
-                    # direction = 0                       
                 
                 elif bt.command == 8:    
                     # changeMode
