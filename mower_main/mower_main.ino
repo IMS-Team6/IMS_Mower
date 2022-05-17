@@ -107,6 +107,9 @@ void collision() {
 void autoTurn() {
   float timeToTurn = random(800, 1800);
 
+  move(BACKWARDS, 40 / 100.0 * 255);
+  _delay(200);
+
   if (autoTurnDirection == LEFT) {
     move(LEFT, 40 / 100.0 * 255);
     _delay(timeToTurn);
@@ -138,6 +141,11 @@ void isr_process_motorRight(void)
 
 int checkSensors() {
   if (ultrasonic_10.distanceCm() <= distanceToObstacle) {
+    if (random(0,1)){
+      autoTurnDirection = RIGHT;
+    }else{
+      autoTurnDirection = LEFT;
+    }
     return 2;
   } else if (linefollower_9.readSensors() == 1) {
     autoTurnDirection = RIGHT;
@@ -186,15 +194,6 @@ int autonomousDriving(int currentState) {
 
     case 1:
       //Check sensors while driving forward
-      /*if (Serial.available() > 0) {
-        move(STOP, 0);
-        char data = Serial.read();
-        if (data == 'M') {
-          mode = 1;
-          break;
-        }
-        }
-        moveForward();*/
       moveForward();
       nextState = checkSensors();
       break;
