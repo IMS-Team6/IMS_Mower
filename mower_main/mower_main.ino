@@ -151,7 +151,7 @@ int checkSensors() {
     autoTurnDirection = RIGHT;
     return 3;
   } else if ((linefollower_9.readSensors() == 2) || (linefollower_9.readSensors() == 0)) {
-    autoTurnDirection == LEFT;
+    autoTurnDirection = LEFT;
     return 3;
   } else {
     return 1;
@@ -201,8 +201,8 @@ int autonomousDriving(int currentState) {
     case 2:
       //Found obstacle, handle it
       stopMotors();
-      _delay(2500);
       Serial.println('O');
+      _delay(3000);
       //receiveAck();
       nextState = 4;
       break;
