@@ -47,9 +47,9 @@ def sendPositionRequest(x, y, sessionID, state, collisionFlag):
 #     }
 
 #     response = requests.request("POST", url, headers=headers, data=payload, files=files)
-    print(response.text)
+#     print(response.text)
 
-def sendImageRequest(x,y):
+def sendImageRequest(x,y, sessionID):
     path = '/home/pi/Desktop/images/image.jpg'
     url = "http://3.72.195.76/api/session/" + sessionID
 
@@ -79,7 +79,7 @@ class CalculatePosition:
     def terminate(self):
         print("(%s, %s)" % (int(self.x), int(self.y)))
         #Send data to backend here instead of printing
-        #sendPositionRequest(int(self.x), int(self.y), sessionID, "MOVING", self.collision)
+        sendPositionRequest(int(self.x), int(self.y), sessionID, "MOVING", self.collision)
         self.collision = False
         self._running = False
 
@@ -101,7 +101,7 @@ class CalculatePosition:
             if sendMessage == self.messagesPerSecond:
                 print("(%s, %s)" % (int(self.x), int(self.y)))
                 #Send data to backend here instead of printing
-                #sendPositionRequest(int(self.x), int(self.y), sessionID, "MOVING", self.collision)
+                sendPositionRequest(int(self.x), int(self.y), sessionID, "MOVING", self.collision)
                 self.collision = False
 
 
@@ -195,7 +195,7 @@ threadPos = Thread(target=pos.run, args=(speed, direction), daemon=1)
 global sessionID
 sessionID = datetime.datetime.now().strftime("%y%m%d%H%M%S")
 # Send the first position to backend here (Session started at 0,0)
-#sendPositionRequest(int(pos.x), int(pos.y), sessionID, "START", False)
+sendPositionRequest(int(pos.x), int(pos.y), sessionID, "START", False)
 
 #Variables used in statemachines
 running = True #Variable keeping track of program running
@@ -227,7 +227,7 @@ while running:
                     camera.capture('/home/pi/Desktop/images/image.jpg')
                     print('Picture captured')
                     # Send picture to backend here
-                    sendImageRequest(int(pos.x), int(pos.y))
+                    sendImageRequest(int(pos.x), int(pos.y), sessionID)
                     #serUSB.write(b'A')
 
                 elif line == 'B':
@@ -318,14 +318,12 @@ while running:
                     # changeMode
                     serUSB.write(b'5')
                     mode = "Automated"
-                bt.receivedMessage = False
-                 
-    
+                bt.receivedMessage = False  
     except KeyboardInterrupt:
         if app_sock is not None:
             app_sock.close()
         server_sock.close()
         print("Server going down")
-        #sendPositionRequest(int(pos.x), int(pos.y), sessionID, "STOP", False)
+        sendPositionRequest(int(pos.x), int(pos.y), sessionID, "STOP", False)
         pos.terminate()
         running = False   
