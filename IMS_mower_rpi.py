@@ -30,40 +30,21 @@ def sendPositionRequest(x, y, sessionID, state, collisionFlag):
     response = requests.request("POST", url, headers=headers, data=payload)
     print(response.text)
 
-
-# def sendImageRequest(x,y):
-#     path = '/home/pi/Desktop/images/image.jpg'
-#     url = "http://3.72.195.76/api/session/" + sessionID
-
-#     payload={
-#     'posX': x,
-#     'posY': y
-#     }
-#     files=[
-#     ('collisionImg', ('image.jpg',open(path, 'rb'), 'image/jpg'))
-#     ]
-#     headers = {
-#     'Content-Type': 'application/json'
-#     }
-
-#     response = requests.request("POST", url, headers=headers, data=payload, files=files)
-#     print(response.text)
-
 def sendImageRequest(x,y, sessionID):
     path = '/home/pi/Desktop/images/image.jpg'
-    url = "http://3.72.195.76/api/session/" + sessionID
+    url = "http://3.72.195.76/api/upload/" + sessionID
 
     payload = {
     'posX': x,
     'posY': y}
-    files = {
+    files = [
     ('collisionImg', ('image.jpg', open(path, 'rb'), 'image/jpg'))
-    }
+    ]
     headers = {} # NO HEADER!! Only blank space.
 
     response = requests.request("POST", url, headers=headers, data=payload, files=files)
 
-    #response.raise_for_status()
+    # response.raise_for_status()
     print(response.text)        
 
 
@@ -322,8 +303,8 @@ while running:
     except KeyboardInterrupt:
         if app_sock is not None:
             app_sock.close()
+        print("Server going down...")
         server_sock.close()
-        print("Server going down")
-        sendPositionRequest(int(pos.x), int(pos.y), sessionID, "STOP", False)
         pos.terminate()
+        sendPositionRequest(int(pos.x), int(pos.y), sessionID, "STOP", False)
         running = False   
