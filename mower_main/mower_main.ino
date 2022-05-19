@@ -167,20 +167,6 @@ String getOrientation() {
   return String(angle);
 }
 
-void receiveAck() {
-  while (1) {
-    if (Serial.available() > 0) {
-      char data = Serial.read();
-      if (data == 'A') {
-        break;
-      /*}else if (data == 'M'){
-        mode = 1;
-        //Might need to do some other shit here aswell.....*/
-      }
-    }
-  }
-}
-
 int autonomousDriving(int currentState) {
   int nextState = 0;
   switch (currentState) {
@@ -188,7 +174,6 @@ int autonomousDriving(int currentState) {
       //StartMotors
       Serial.println('S');
       moveForward();
-      //receiveAck();
       nextState = 1;
       break;
 
@@ -199,40 +184,27 @@ int autonomousDriving(int currentState) {
       break;
 
     case 2:
-      //Found obstacle, handle it
+      //Found obstacle
       stopMotors();
       Serial.println('O');
       _delay(3000);
-      //receiveAck();
       nextState = 4;
       break;
 
     case 3:
-      //Out of bounds, handle it
+      //Out of bound
       stopMotors();
       Serial.println('B');
-      //receiveAck();
       nextState = 4;
       break;
 
     case 4:
-      //Turn, handle orientation
+      //Turn and send direction
       Serial.println("T");
-      //receiveAck();
       autoTurn();
       Serial.println(getOrientation()); //Add the rounded value of new direction
-      //receiveAck();
       nextState = 0;
       break;
-
-      /*case 5:
-        //Stop the robot and change mode to manual
-        move(STOP, 0);
-        //Serial.println('B');
-        receiveAck();
-        mode = 1;   //Change to manual
-        //state = 0;  //Initial value for next mode
-        break;*/
   }
   return nextState;
 }
@@ -245,9 +217,7 @@ void bluetoothDriving(char nextState) {
       if (turnFlag == 1) {
         //Read gyro and send data to rpi
         Serial.println(getOrientation());
-        //receiveAck();
         turnFlag = 0;
-
       }
       break;
 
@@ -313,21 +283,17 @@ void loop() {
     case 0:
       //Autonomous
       if (Serial.available() > 0) {
-        //_loop();
         move(STOP, 0);
-        //_loop();
         char data = Serial.read();
         if (data == 'M') {
           mode = 1;
         }
-        //autonomousDriving(5);
       } else {
         rgbLED.setColor(0,0,100,0);
         rgbLED.show();
         
         autoState = autonomousDriving(autoState);
       }
-      //autoState = autonomousDriving(autoState);
       break;
 
     case 1:
@@ -342,7 +308,7 @@ void loop() {
       break;
 
     default:
-      //Dont get here
+      //Should not end up here....
       break;
   }
   _loop();
