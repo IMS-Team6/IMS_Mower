@@ -97,13 +97,6 @@ void stopMotors() {
   move(STOP, 0);
 }
 
-void collision() {
-  moveBackward();
-  delay(500);
-  turnRight();
-  delay(500);
-}
-
 void autoTurn() {
   float timeToTurn = random(800, 1800);
 
